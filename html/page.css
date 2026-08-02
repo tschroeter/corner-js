@@ -29,6 +29,12 @@
     --border-subtle: rgba(0, 0, 0, 0.06);
     --border-default: rgba(0, 0, 0, 0.1);
     --border-strong: rgba(0, 0, 0, 0.16);
+    /* The playground's artboard and the squares on it. Light scheme: a paper grey, tinted dark. */
+    --stage-neutral: #ececec;
+    --stage-tint: rgba(0, 0, 0, 0.05);
+    /* What the object picker starts on. Not pure white in either scheme -- at this size it is the one
+       element large enough for the difference between #fff and an 82% grey to read as glare. */
+    --stage-object: #f4f5f6;
     /* The nav's own surface, shared by the header and its panels so the two are seamless.
        Translucent on purpose: with the blur behind it, that is what reads as one sheet of glass
        rather than two stacked boxes. */
@@ -73,7 +79,11 @@
     /* The px floors carry the PHONE sizes: below ~900px the vw terms fall under them, so raising
        a floor raises mobile alone and the desktop ceiling stays where it was measured. */
     --heading-size-h1: clamp(40px, 4.4vw, 56px);
-    --heading-size-h2: clamp(27px, 2.6vw, 32px);
+    /* The ceiling was 32px, which is what left half the page looking empty: a section heading has a
+       whole column to fill, and at 32 it filled a fifth of one line of it. linear.app runs 48 in a
+       640px column -- 3vw reaches 35 at 1180 and 46 at 1700, so the heading grows with the column
+       instead of stopping a third of the way in. */
+    --heading-size-h2: clamp(28px, 3vw, 46px);
     --heading-size-h3: clamp(18px, 1.4vw, 19px);
     --heading-tracking: -0.008em;   /* Inter: -0.022em */
     --heading-weight: 500;          /* Inter: 510 */
@@ -156,6 +166,12 @@
         --border-subtle: rgba(255, 255, 255, 0.05);
         --border-default: rgba(255, 255, 255, 0.08);
         --border-strong: rgba(255, 255, 255, 0.14);
+        /* Dark scheme: the board sits a shade above the page so the object has something to stand on,
+           and the squares are tinted with light instead of dark. A 555px board at #ececec carrying a
+           pure white object is a lamp on a dark page. */
+        --stage-neutral: #1a1c1f;
+        --stage-tint: rgba(255, 255, 255, 0.045);
+        --stage-object: #c9ced6;
         --nav-surface: rgba(14, 15, 17, 0.8);
         --nav-scrim: rgba(8, 9, 10, 0.45);
     }
@@ -202,7 +218,23 @@ h1, h2, h3 {
 }
 
 h1 { font-size: var(--heading-size-h1); }
-h2 { font-size: var(--heading-size-h2); }
+/* 1.05, not 1.1: at 46px the looser leading opened a gap between two lines of one heading that read
+   as two separate headings. Theirs runs at exactly 1.0.
+ *
+   balance, so where a heading does take two lines they come out even rather than leaving one word
+   below. It does not CAUSE the break: the reference sets those by hand in the markup -- checked, their
+   headline carries a literal <br> -- and so do the three below that have the words for it. */
+h2 {
+    font-size: var(--heading-size-h2);
+    line-height: 1.05;
+    text-wrap: balance;
+}
+
+/* The hand-set break belongs to the two-column layout only. Stacked, the heading has the page's full
+   measure and breaking it early would just make a short line shorter. */
+@media (max-width: 860px) {
+    br.wide-only { display: none; }
+}
 h3 { font-size: var(--heading-size-h3); }
 
 p { margin: 0; }
@@ -901,7 +933,16 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
    Sticky needs a container taller than the pinned column to travel in. It had none when the artboard
    and the controls shared one side: both columns measured ~520px against a 523px grid, 19 pixels of
    travel, and the column scrolled away with the section. Measured, not assumed. */
-.playground-lede { margin: 0; color: var(--fg-muted); text-wrap: pretty; }
+/* On the LEFT, between the heading and the controls: it explains what the controls do, so it belongs
+   with them rather than across the gap from them. The artboard is therefore the first thing on the
+   right and starts level with the heading -- the alignment the other sections get from their
+   standfirst cannot apply where the right column opens with a drawing. */
+.playground-lede {
+    margin: 0 0 var(--spacing-5);
+    max-width: 46ch;
+    color: var(--fg-muted);
+    text-wrap: pretty;
+}
 
 /* Same construction as the other two-column sections: the head borrows the grid's rows so the
    artboard starts at the lede, and stays one element so the heading is pinned with it. */
@@ -1067,7 +1108,7 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
     border-radius: var(--rounded-xl);
     /* A checkerboard, so a clip-path that is off by a pixel shows up instead of
        hiding against a flat field. */
-    background-color: var(--stage-colour, #ececec);
+    background-color: var(--stage-colour, var(--stage-neutral));
     /* Pinch and drag, so the curve can be inspected at any scale. The board takes the gestures
        itself, which is why the browser must not also act on them. */
     touch-action: none;
@@ -1088,11 +1129,13 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
     transform-origin: top left;
 }
 
+/* Tinted from tokens rather than fixed light values -- the same relationship in both schemes, not the
+   same numbers. */
 .stage[data-background="transparent"] {
-    background-color: #ececec;
+    background-color: var(--stage-neutral);
     background-image:
-        linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25% 75%, rgba(0, 0, 0, 0.05) 75%),
-        linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25% 75%, rgba(0, 0, 0, 0.05) 75%);
+        linear-gradient(45deg, var(--stage-tint) 25%, transparent 25% 75%, var(--stage-tint) 75%),
+        linear-gradient(45deg, var(--stage-tint) 25%, transparent 25% 75%, var(--stage-tint) 75%);
     background-size: 24px 24px;
     background-position: 0 0, 12px 12px;
 }
