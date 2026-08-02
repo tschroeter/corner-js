@@ -1,0 +1,2373 @@
+/* page.css -- the corner.js documentation page.
+ *
+ * The page's own stylesheet. It is not part of the module: corner.js reads
+ * border-radius, --corner-smoothing and box-shadow off whatever CSS an element
+ * already has, so nothing here is required to use it.
+ *
+ * NOTE for anything styled here that corner-js touches: the module WRAPS its
+ * target in a [data-corner-shadow-wrap] div, so `parent > target` stops matching
+ * after boot. Every selector below is flat for that reason -- see README.md. */
+
+:root {
+    --black: #141414;
+    --white: #fff;
+    --gray-a10: #fafafa;
+    --smoke: #e7e7e7;
+    --focus: #137cec;
+    /* The comparison: the drawn curve in near-black, the plain arc in red behind it, so red shows
+       exactly where the arc reaches past. Grey rather than blue -- the page has no other saturated
+       colour, and a blue silhouette read as a brand element instead of as a measurement. */
+    --compare-drawn: #2f3133;
+    --compare-arc: #e04e42;
+
+    --bg-base: var(--white);
+    --bg-section: var(--gray-a10);
+    --bg-surface: var(--white);
+    --fg-body: var(--black);
+    --fg-muted: rgba(0, 0, 0, 0.55);
+    --fg-faint: rgba(0, 0, 0, 0.4);
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --border-default: rgba(0, 0, 0, 0.1);
+    --border-strong: rgba(0, 0, 0, 0.16);
+    /* The nav's own surface, shared by the header and its panels so the two are seamless.
+       Translucent on purpose: with the blur behind it, that is what reads as one sheet of glass
+       rather than two stacked boxes. */
+    --nav-surface: rgba(255, 255, 255, 0.8);
+    --nav-scrim: rgba(232, 232, 237, 0.4);
+    --nav-blur: blur(20px);
+
+    /* TEST: Fira Sans, ahead of the stack the page was measured with. Put Inter back by removing
+       the first entry -- "Inter Variable", Inter is still behind it and nothing else changes. */
+    --font-body: "Fira Sans", "Inter Variable", Inter, "SF Pro Display", -apple-system,
+                 BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    /* No --font-logo any more: the wordmark uses the body family as well, so a second token
+       would be one nothing reads. */
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    /* The external-link arrow, as a mask so it takes the surrounding text colour. */
+    --icon-external: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.2 3.2h6.6v6.6'/%3E%3Cpath d='M10.8 3.2 3.2 10.8'/%3E%3C/g%3E%3C/svg%3E");
+
+    --text-size-body: 16px;
+    /* Reading copy: prose, list items, features, FAQ answers. One token, because the three
+       separate clamps this replaces had already drifted apart -- lists were left on the body size
+       while the paragraphs beside them were a step larger. */
+    --text-size-reading: clamp(17px, 1.3vw, 19px);
+    --leading-reading: 1.6;
+    --text-size-label: 14px;
+    --text-size-small: 12px;
+    --text-size-detail: 13px;
+    /* Sizes and leading measured off linear.app: 56px, line height 61.6 = 1.1.
+     *
+       TRACKING AND WEIGHT BELONG TO THE FAMILY, not to the layout. The -0.022em and the 510 were
+       measured on Inter, whose display sizes are set tight and which has a weight axis to hit 510
+       at all. Fira Sans is a humanist face with wider sidebearings and static cuts only: -0.022em
+       closes its counters up and 510 rounds to 500 regardless. So both drop to values that suit
+       it, and going back to Inter means putting the two commented numbers back. */
+    /* The px floors carry the PHONE sizes: below ~900px the vw terms fall under them, so raising
+       a floor raises mobile alone and the desktop ceiling stays where it was measured. */
+    --heading-size-h1: clamp(40px, 4.4vw, 56px);
+    --heading-size-h2: clamp(27px, 2.6vw, 32px);
+    --heading-size-h3: clamp(18px, 1.4vw, 19px);
+    --heading-tracking: -0.008em;   /* Inter: -0.022em */
+    --heading-weight: 500;          /* Inter: 510 */
+    --heading-leading: 1.1;
+
+    --spacing-2: clamp(6px, 1vw, 8px);
+    --spacing-3: clamp(9px, 1.5vw, 12px);
+    --spacing-4: clamp(12px, 2vw, 16px);
+    --spacing-5: clamp(16px, 2.5vw, 20px);
+    --spacing-6: clamp(18px, 3vw, 24px);
+    --spacing-8: clamp(24px, 4vw, 32px);
+
+    --rounded: 6px;
+    --rounded-lg: 9px;
+    --rounded-xl: 12px;
+
+    /* 90rem. There is no root font-size override in this file, so 1rem is the browser's 16px and
+       this resolves to 1440px -- wider than the 1280 it replaced, and it grows with a reader who
+       has raised their default font size, which a px cap does not. */
+    --container: 90rem;
+    /* phi, carrying its own unit. The playground's two columns use it -- controls to artboard as
+       1 : phi. It has to be a whole token rather than a bare number: <flex> units are
+       not valid inside calc(), so `calc(1fr * var(--golden))` is an invalid declaration
+       and the whole grid-template-columns line would be dropped. */
+    --golden: 1.618;
+    --golden-fr: 1.618fr;
+    /* The hero shape, filling its board. Fluid rather than fixed, because the difference it
+       has to show is a couple of pixels of curve: bigger is strictly more legible. The
+       radius follows it at the ratio the fixed pair used (58 of 168), so the corner keeps
+       its proportion at every size. */
+    /* A radius reads as a FRACTION of the box it rounds, so the box must not shrink far below the
+       size the slider's px values were chosen against: at 140px a 79px radius is 56% of the side,
+       and at 50% every curve is a circle. The floor keeps the phone within reach of the desktop
+       ratio; the cap on --hero-radius below is the guard for whatever is left. */
+    --hero-shape: clamp(200px, 16vw, 240px);
+    /* MAGNIFICATION, because the thing to be seen is a few pixels wide. corner.js measures the
+       LAYOUT box, which a transform does not change, so the path is generated at the unscaled size
+       and then scaled as vector -- crisp at any factor, and the difference between the two curves
+       grows with it. 3x turns a 3px sliver into 9. */
+    --hero-zoom: 3;
+    /* The hero sliders start at 33, and heroShape() writes radius * 2.4 for the preview and the
+       radius itself for the frame. Declaring the same two values here means the first paint is
+       already what the script would set -- no jump when it runs. */
+    --hero-slider-radius: 33px;
+    /* THE HEADLINE FRAME is a short box -- 68px tall against a 210px width -- and the drawing caps
+       both radius and reach at min(w, h) / 2. Reach is (1 + smoothing) * radius, so a radius over
+       h / 4 spends the whole budget on roundness and the smoothing slider stops changing anything:
+       0.6 and 1.0 drew byte-identical paths. 0.33em is h / 4 at this headline, and it scales with
+       it. Below that the radius slider still drives the frame directly. */
+    --frame-radius: min(var(--hero-slider-radius), 0.33em);
+    /* Capped BELOW the drawing's own budget clamp (half the box): at the clamp, radius equals half
+       the side and every curve is a circle -- which is exactly what the phone showed, where the
+       board shrinks to 140px and 33 * 2.4 = 79 > 70. 0.42 keeps straight edge visible either side
+       of the corner at every board size, and changes nothing at the desktop 240px. */
+    --hero-radius: min(calc(var(--hero-slider-radius) * 2.4), calc(var(--hero-shape) * 0.42));
+    /* DERIVED from what .site-header is actually made of -- its own padding-block twice
+       plus the brand's line box -- rather than a number typed in and left to drift.
+       Measured against the rendered header at 79px, which is what this computes to. The
+       sticky playground column offsets by it, or the header sits on top of the artboard
+       and the fade overlay washes its top edge. */
+    --header-height: calc(2 * var(--spacing-5) + 39px);
+
+    /* The page's own default smoothing. Set here rather than per element BECAUSE
+       --corner-smoothing inherits (see README) -- one declaration governs every
+       corner below, which is the whole point of it being a custom property. */
+    --corner-smoothing: 0.6;
+}
+
+/* Linear's values, read off the page rather than eyeballed: background rgb(8,9,10), text
+   rgb(247,248,248), muted rgb(138,143,152). The near-black is what makes a 1px translucent
+   border read as a border rather than as a smudge. */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-base: #08090a;
+        --bg-section: #0e0f11;
+        --bg-surface: #101113;
+        --fg-body: #f7f8f8;
+        --fg-muted: #8a8f98;
+        --fg-faint: #62666d;
+        --border-subtle: rgba(255, 255, 255, 0.05);
+        --border-default: rgba(255, 255, 255, 0.08);
+        --border-strong: rgba(255, 255, 255, 0.14);
+        --nav-surface: rgba(14, 15, 17, 0.8);
+        --nav-scrim: rgba(8, 9, 10, 0.45);
+    }
+}
+
+* { box-sizing: border-box; }
+
+/* [hidden] is a display: none from the UA stylesheet, so ANY author rule that sets display wins --
+   and .control, .toggle and .control-note all do. The playground was setting `hidden` correctly and
+   the controls stayed on screen: exponent visible under a continuous curve, smoothing under a
+   superellipse. One of the few places !important is the fix rather than a smell. */
+[hidden] { display: none !important; }
+
+/* clip, not hidden: hidden would make the root a scroll container and trap position: sticky.
+   The shadow SVGs are real boxes -- a native box-shadow never adds scrollable overflow, so an
+   element near the viewport edge must not either. */
+html { overflow-x: clip; }
+
+body {
+    margin: 0;
+    overflow-x: clip;
+    font: var(--text-size-body) / 1.5 var(--font-body);
+    color: var(--fg-body);
+    background: var(--bg-base);
+    -webkit-font-smoothing: antialiased;
+    /* Harmless with the family currently loaded: Fira Sans ships static cuts and has no optical
+       size axis, so this does nothing until an axis exists. It is kept because Inter has one, and
+       Inter is still next in the stack. */
+    font-optical-sizing: auto;
+    /* No font-feature-settings. I had cv05/cv08/ss03 here with a comment claiming they
+       disambiguate l from 1 -- I could not verify that mapping, and an unverified claim in a
+       declaration is worse than the declaration being absent. */
+}
+
+h1, h2, h3 {
+    margin: 0;
+    font-weight: var(--heading-weight);
+    line-height: var(--heading-leading);
+    letter-spacing: var(--heading-tracking);
+    /* Headings are what `balance` is actually for: it evens the line lengths instead of
+       leaving one word alone on the last line, and Chrome caps the balancing at six lines
+       so it never reaches the body copy below. */
+    text-wrap: balance;
+}
+
+h1 { font-size: var(--heading-size-h1); }
+h2 { font-size: var(--heading-size-h2); }
+h3 { font-size: var(--heading-size-h3); }
+
+p { margin: 0; }
+
+a { color: inherit; text-decoration-color: currentColor; text-underline-offset: 3px; }
+
+/* EXTERNAL LINKS carry a diagonal arrow, and the arrow is never underlined. That requires moving
+   the underline off the anchor and onto the label: a text-decoration set on an anchor is drawn
+   ACROSS everything inside it, pseudo-elements included, and `text-decoration: none` on a
+   descendant cannot take it back. So the icon sits outside the underlined box rather than trying
+   to be exempted from it. The label span is written by the page's own markup pass. */
+a[target="_blank"] { text-decoration: none; }
+
+/* An icon link takes no underline: that is for words. */
+.site-github .link-text { text-decoration: none; }
+
+a[target="_blank"] .link-text {
+    text-decoration: underline;
+    text-decoration-color: currentColor;
+    text-underline-offset: 3px;
+}
+
+/* :not(), not a later override: an equally specific rule would lose on source order, which is
+   exactly what happened when the exemption stood on its own. */
+a[target="_blank"]:not(.site-github)::after {
+    content: "";
+    display: inline-block;
+    width: 0.56em;
+    height: 0.56em;
+    margin-left: 0.24em;
+    /* A masked shape rather than the ↗ glyph: U+2197 is missing from plenty of families and
+       falls back to another face at another size. */
+    background-color: currentColor;
+    -webkit-mask: var(--icon-external) no-repeat center / contain;
+    mask: var(--icon-external) no-repeat center / contain;
+    opacity: 0.5;
+}
+
+a[target="_blank"]:not(.site-github):hover::after { opacity: 1; }
+
+/* The header is sticky, so an anchor jump would put its target underneath it. Every element with
+   an id is a potential target -- the nav, the FAQ's cross-references and the page's own
+   scrollIntoView calls all land the same distance clear of it. */
+[id] { scroll-margin-top: calc(var(--header-height) + var(--spacing-4)); }
+
+code, pre { font-family: var(--font-mono); font-size: var(--text-size-detail); }
+
+/* ---------- shell ---------- */
+
+.wrap {
+    width: 100%;
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--spacing-6);
+}
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    /* Transparent until a panel opens, so the fade overlay below can do its job and the nav has
+       no hard bottom edge while scrolling. */
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    transition: background-color 160ms ease;
+}
+
+/* SEAMLESS: with a panel open the header takes the same surface and the same blur as the panel,
+   so the boundary between them disappears. Apple gets this for free -- their nav bar sits inside
+   the growing flyout -- and this is the same result without restructuring the header.
+ *
+   ABOVE THE BREAKPOINT ONLY, and that is not cosmetic: backdrop-filter makes the header the
+   containing block for its fixed descendants, and the mobile sheet is one. Applied in the sheet,
+   hovering a group collapsed the sheet to the header's height and releasing it restored it -- the
+   flicker was the sheet resizing under the pointer. */
+@media (min-width: 861px) {
+    .site-header:has(.nav-group[data-open]) {
+        background: var(--nav-surface);
+        backdrop-filter: var(--nav-blur);
+        -webkit-backdrop-filter: var(--nav-blur);
+    }
+}
+
+.site-header .wrap {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-6);
+    padding-block: var(--spacing-5);
+}
+
+/* The wordmark uses the body family, not the serif it started as. Sans throughout means the
+   header reads as one thing; the wordmark separates itself by weight and tracking instead of by
+   changing typeface -- heavier than the nav's 400, and tighter than the headings because a short
+   string at this size can carry it. Both numbers are family-dependent, same as the headings:
+   Inter's were 560 and -0.03em. */
+.brand {
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    text-decoration: none;
+}
+
+.site-nav {
+    display: flex;
+    gap: var(--spacing-5);
+    /* 13px, theirs. Small enough that the nav recedes and the headline is the only thing
+       asking to be read -- the size does that, not a lighter colour. */
+    font-size: var(--text-size-detail);
+    color: var(--fg-body);
+}
+
+.site-nav a { text-decoration: none; }
+.site-nav a:hover { color: var(--fg-body); text-decoration: underline; }
+
+/* ---------- grouped nav ---------- */
+
+/* static, so the panel above resolves against the header rather than against the group. */
+.nav-group { position: static; }
+
+.nav-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.nav-trigger:hover .nav-trigger-label { text-decoration: underline; }
+
+/* Focus shows on the caret alone: a colour change here would be the one thing the hover state
+   deliberately does not do. */
+.nav-trigger:focus-visible { outline: none; }
+.nav-trigger:focus-visible .nav-caret { border-color: var(--focus); border-width: 2px; }
+
+.nav-caret {
+    width: 5px;
+    height: 5px;
+    border-right: 1.2px solid currentColor;
+    border-bottom: 1.2px solid currentColor;
+    transform: translateY(-1px) rotate(45deg);
+    transition: transform 160ms ease;
+}
+
+.nav-trigger[aria-expanded="true"] .nav-caret { transform: translateY(1px) rotate(-135deg); }
+
+/* A FULL-WIDTH panel under the header, per the reference: it spans the header's own box and its
+   content sits on the page's measure, in columns.
+ *
+   position: absolute with .nav-group set back to static, so the nearest positioned ancestor is
+   .site-header -- NOT fixed, because the header carries a backdrop-filter and that makes it the
+   containing block for fixed descendants. The same trap cost the mobile sheet its height. */
+.nav-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    overflow: hidden;
+    background: var(--nav-surface);
+    backdrop-filter: var(--nav-blur);
+    -webkit-backdrop-filter: var(--nav-blur);
+    height: 0;
+    visibility: hidden;
+    transition: height 320ms cubic-bezier(0.4, 0, 0.6, 1), visibility 0s linear 320ms;
+}
+
+/* The content fades in behind the growing edge rather than being dragged down with it. */
+.nav-panel-inner { opacity: 0; transition: opacity 200ms ease; }
+
+.nav-group[data-open] .nav-panel-inner { opacity: 1; transition: opacity 260ms ease 90ms; }
+
+.nav-panel-inner {
+    width: 100%;
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: var(--spacing-4) var(--spacing-6) var(--spacing-8);
+}
+
+.nav-panel-links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    margin-top: var(--spacing-3);
+    text-align: left;
+}
+
+.nav-group[data-open] .nav-panel {
+    visibility: visible;
+    transition: height 320ms cubic-bezier(0.4, 0, 0.6, 1), visibility 0s;
+}
+
+.nav-panel-title {
+    text-align: left;
+    margin-bottom: 6px;
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+}
+
+/* Large, like the reference's primary column -- these are destinations, not a list of options. */
+.nav-panel a {
+    padding-block: 4px;
+    text-decoration: none;
+    font-size: clamp(19px, 1.7vw, 24px);
+    font-weight: 500;
+    letter-spacing: var(--heading-tracking);
+    color: var(--fg-body);
+}
+
+.nav-panel a:hover { color: var(--fg-body); text-decoration: underline; }
+
+/* Their curtain, measured: rgba(232,232,237,0.4) over blur(20px), 0.32s on
+   cubic-bezier(0.4, 0, 0.6, 1) after an 80ms delay. A light wash, not a dark overlay. */
+.nav-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: var(--nav-scrim);
+    backdrop-filter: var(--nav-blur);
+    -webkit-backdrop-filter: var(--nav-blur);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 320ms cubic-bezier(0.4, 0, 0.6, 1) 80ms, visibility 0s linear 400ms;
+}
+
+html[data-nav-open] .nav-scrim {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 320ms cubic-bezier(0.4, 0, 0.6, 1) 80ms, visibility 0s;
+}
+
+@media (max-width: 860px) {
+    .nav-scrim { display: none; }
+}
+
+/* The one ungrouped item, styled with the triggers so the row reads as one line. */
+.nav-link { color: inherit; }
+
+/* The GitHub mark, last in the row and larger than the nav text -- it is a target, not a word. */
+.site-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-size-detail);
+    /* The only thing pushed right. The nav itself stays beside the wordmark. */
+    margin-left: auto;
+    color: var(--fg-body);
+}
+
+.site-github svg { width: 22px; height: 22px; fill: currentColor; }
+.site-github:hover { opacity: 0.6; }
+
+/* ---------- the burger, and the sheet it opens ---------- */
+
+.nav-toggle,
+.nav-close {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    /* 44px, the smallest target a thumb finds reliably. */
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.nav-toggle { margin-left: auto; gap: 7px; }
+
+/* Two lines, not three: it is the same mark the close button is made of, and the pair reads as a
+   menu without pretending to be a stack of items. */
+.nav-toggle span,
+.nav-close span {
+    display: block;
+    width: 22px;
+    height: 1.5px;
+    margin-inline: auto;
+    background: var(--fg-body);
+    border-radius: 2px;
+}
+
+.nav-close {
+    position: absolute;
+    top: var(--spacing-4);
+    right: var(--spacing-4);
+    gap: 0;
+}
+
+/* Two lines crossed at the button's centre. Each is centred first and rotated second, or they
+   keep their stacked flex positions and the cross comes out lopsided. */
+.nav-close span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: 0;
+}
+
+.nav-close span:first-child { transform: translate(-50%, -50%) rotate(45deg); }
+.nav-close span:last-child { transform: translate(-50%, -50%) rotate(-45deg); }
+
+@media (max-width: 860px) {
+    .nav-toggle { display: flex; }
+
+    /* THE SHEET'S SIZE DEPENDS ON THIS. backdrop-filter makes the header a containing block for
+       its fixed descendants, so `inset: 0` resolved against the header's own 79px box and the
+       menu came out one header tall with everything below it cut off. The blur has nothing left
+       to do behind a full-screen panel anyway. */
+    .site-header[data-menu="open"] {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    /* The sheet covers the header as well: with the logo and the burger still showing, this
+       reads as a dropdown rather than as the whole screen.
+     *
+       It is laid out at all times and hidden by visibility, because `display: none` cannot
+       transition -- and the reveal is the point: the panel is uncovered from the top down while
+       the links fade in one after another. */
+    .site-nav {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        flex-direction: column;
+        gap: clamp(2px, 1.4vh, 10px);
+        padding: calc(var(--spacing-8) + 44px) var(--spacing-6) var(--spacing-6);
+        margin-left: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        font-size: clamp(23px, 6.4vw, 30px);
+        font-weight: 600;
+        letter-spacing: var(--heading-tracking);
+        color: var(--fg-body);
+        background: var(--bg-base);
+        /* A fade with a short drop, which is what the panel does in Apple's own nav: the page
+           stays faintly visible through it while it comes in. visibility rather than display,
+           because display cannot transition -- and it keeps the invisible sheet from catching
+           taps, delayed by the fade's duration so it leaves only once the panel has gone. */
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
+    }
+
+    /* The trigger is a <button>, not an <a>: the sheet lists group names, so the staggered reveal
+       has to name both or the items simply appear. */
+    .site-nav a,
+    .site-nav .nav-trigger {
+        padding-block: 6px;
+        opacity: 0;
+        transform: translateY(-8px);
+        transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .site-header[data-menu="open"] .site-nav {
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        transition: opacity 220ms ease, transform 300ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+    }
+
+    /* --i is written by the page script, so the cascade follows the DOM order without ten rules. */
+    .site-header[data-menu="open"] .site-nav a,
+    .site-header[data-menu="open"] .site-nav .nav-trigger {
+        opacity: 1;
+        transform: none;
+        transition: opacity 260ms ease calc(60ms + var(--i, 0) * 34ms),
+                    transform 320ms cubic-bezier(0.22, 1, 0.36, 1) calc(60ms + var(--i, 0) * 34ms);
+    }
+
+    .site-header[data-menu="open"] .nav-close { display: flex; }
+
+    /* ONLY THE GROUP NAMES in the sheet: five destinations instead of twelve. Each one leads to
+       the first entry of its group -- the script turns the trigger into that jump, since a button
+       that opens nothing has no business being a button here. */
+    .nav-group { position: static; display: block; }
+    .nav-panel { display: none; }
+
+    .nav-trigger {
+        display: block;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: none;
+        color: var(--fg-body);
+        text-align: left;
+    }
+
+    .nav-caret { display: none; }
+
+    .nav-panel {
+        position: static;
+        height: auto;
+        overflow: visible;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        transition: none;
+        gap: clamp(2px, 1.2vh, 8px);
+    }
+
+    .nav-panel a { padding: 0; font-size: inherit; color: var(--fg-body); }
+    .nav-panel-inner { opacity: 1; transition: none; padding: 0; }
+
+    /* The mark belongs in the sheet on a phone, not next to the burger. */
+    .site-github { display: none; }
+    .site-header[data-menu="open"] .site-github {
+        display: inline-flex;
+        position: fixed;
+        left: var(--spacing-6);
+        bottom: var(--spacing-6);
+        z-index: 210;
+    }
+
+    /* While the sheet is open the page behind must not scroll under it. */
+    body:has(.site-header[data-menu="open"]) { overflow: hidden; }
+}
+
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
+    .site-nav,
+    .site-nav a,
+    .site-header[data-menu="open"] .site-nav,
+    .site-header[data-menu="open"] .site-nav a { transition-duration: 0s; transition-delay: 0s; }
+}
+
+/* A fixed gradient rather than a background on the header itself, reaching transparent at 90%
+   and staying there, so there is no visible edge where it ends. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 120px;
+    background: linear-gradient(180deg, var(--bg-base) 0, transparent 90%);
+    pointer-events: none;
+    z-index: 90;
+}
+
+section { padding-block: var(--spacing-8); }
+
+/* A tinted band needs more room than a plain one: the same padding that looks generous against the
+   page reads as a tight box once there is an edge above and below it. */
+section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 1.9); }
+
+.section-head { max-width: 62ch; margin-bottom: var(--spacing-6); }
+/* :not(.kicker), because `.section-head p` outranks `.kicker` on specificity and was silently
+   setting the eyebrow to reading size -- 17px under a 32px heading, when the token says 12. */
+.section-head p:not(.kicker) {
+    margin-top: var(--spacing-3);
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    color: var(--fg-muted);
+}
+
+/* A heading with a control in it, and the pair STICKS below the site header. The control is what
+   needs to stay reachable -- the demos it switches run several screens long on a phone -- and a
+   switch floating on its own would be a second, unexplained thing on the page. The section's own
+   background has to be repeated here, or the demos scroll through the row. */
+#components > .wrap > .kicker,
+#components > .wrap > .section-lede { text-align: center; }
+
+#components > .wrap > .section-lede { margin-inline: auto; }
+
+/* Carries the lede's own measure, since it is no longer inside .section-head. */
+.section-lede {
+    max-width: 62ch;
+    margin-top: var(--spacing-3);
+    margin-bottom: var(--spacing-6);
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    color: var(--fg-muted);
+}
+
+.section-head-row {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 5;
+    display: flex;
+    /* Column, so the switch sits under the heading rather than beside it: side by side, the pair
+       read as one wide control and the heading stopped looking centred. */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-4) var(--spacing-5);
+    padding-block: var(--spacing-3);
+    text-align: center;
+}
+
+/* The demos used to scroll under a hard opaque edge. The fade is a pseudo-element rather than a
+   background on the row, because the row's own mask would take its heading with it: this reaches
+   40px past the row, carries the blur, and is masked out at the bottom so the blur has no edge of
+   its own either. z-index -1 stays inside the row's stacking context, under the text. */
+.section-head-row::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 -40px;
+    z-index: -1;
+    background: linear-gradient(180deg, var(--bg-section) 0, var(--bg-section) 58%, transparent 100%);
+    -webkit-backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px);
+    /* Fades in at the top and out at the bottom, and never reaches full opacity: the band reads as
+       a veil the demos pass behind, not as a lid they disappear under. */
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.62) 28%, rgba(0, 0, 0, 0.62) 62%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.62) 28%, rgba(0, 0, 0, 0.62) 62%, transparent 100%);
+    pointer-events: none;
+}
+
+.kicker {
+    margin-bottom: var(--spacing-3);
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+}
+
+/* ---------- hero ---------- */
+
+/* Close to a full viewport, minus the header it sits under: the hero is the whole first
+   screen, which is what makes the shape beside the headline read as the subject rather than as
+   an illustration next to it. min-height rather than height, so a long lede on a narrow window
+   grows the section instead of overflowing it. */
+.hero {
+    display: grid;
+    align-content: center;
+    min-height: calc(100dvh - var(--header-height));
+    padding-block: var(--spacing-8);
+}
+/* THE HEADLINE'S OWN FRAME. "The corner" sits in a filled box that corner.js draws, so the first
+   shape on the page is the subject of the page -- and the sliders below move it. */
+.hero-headline { text-wrap: initial; }
+
+.h1-frame {
+    position: relative;
+    display: inline-block;
+    vertical-align: baseline;
+}
+
+.h1-frame-box {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    padding: 0.06em 0.34em 0.14em;
+    color: var(--bg-base);
+    background: var(--fg-body);
+    border-radius: var(--frame-radius);
+}
+
+/* The wrapper corner.js inserts becomes the inline box, so it carries the stacking. */
+[data-corner-shadow-wrap]:has(> .h1-frame-box) { position: relative; z-index: 1; }
+
+/* ---------- hero controls ---------- */
+
+.hero-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    margin-top: var(--spacing-5);
+}
+
+.hero-slider { display: block; font-size: var(--text-size-detail); color: var(--fg-muted); }
+.hero-slider > span { display: block; margin-bottom: 8px; }
+
+/* The reference's slider: a thin rounded track, dark to the left of the thumb, and a large white
+   thumb with a ring. The fill is a gradient driven by --fill, because a two-tone track has no
+   cross-browser pseudo-element. */
+.hero-slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 22px;
+    margin: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.hero-slider input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: linear-gradient(to right, var(--fg-body) var(--fill, 50%), var(--bg-section) var(--fill, 50%));
+}
+
+.hero-slider input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--bg-section);
+}
+
+.hero-slider input[type="range"]::-moz-range-progress {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--fg-body);
+}
+
+.hero-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    border: 2px solid var(--fg-body);
+    border-radius: 50%;
+    background: var(--bg-base);
+}
+
+.hero-slider input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--fg-body);
+    border-radius: 50%;
+    background: var(--bg-base);
+}
+
+/* The hero's eyebrow carries a little more air than a section kicker: it sits above a 56px
+   headline rather than a 32px one. */
+.hero-copy .kicker { margin-bottom: var(--spacing-4); }
+
+.hero-lede {
+    max-width: 54ch;
+    margin-top: var(--spacing-5);
+    font-size: clamp(19px, 1.6vw, 22px);
+    line-height: 1.55;
+    color: var(--fg-muted);
+    text-wrap: pretty;
+}
+
+.hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-6);
+    font-size: var(--text-size-detail);
+    color: var(--fg-muted);
+}
+
+.pill {
+    padding: 5px 11px;
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+    /* A pill whose own text wraps looks broken, so the row breaks between them instead. */
+    white-space: nowrap;
+}
+
+/* Except where nowrap would overflow the screen: the live chip is a sentence, and a phone is
+   narrower than it. */
+@media (max-width: 460px) {
+    .pill { white-space: normal; }
+}
+
+.pill strong { color: var(--fg-body); font-weight: 600; }
+
+/* ---------- playground ---------- */
+
+.playground {
+    display: grid;
+    /* 1 : phi, not a round 280px. The minmax floors keep the panel usable before the
+       single-column breakpoint takes over, and the 0 floor on the second track is what
+       stops the code panel's long lines from widening the grid instead of scrolling. */
+    grid-template-columns: minmax(230px, 1fr) minmax(0, var(--golden-fr));
+    gap: var(--spacing-6);
+    align-items: start;
+}
+
+@media (max-width: 860px) {
+    .playground { grid-template-columns: minmax(0, 1fr); }
+    /* One column: the artboard sits ABOVE the controls in flow, so pinning it would
+       cover them as you scroll down to reach them. */
+    /* One column: the artboard sits above the controls, so pinning it would cover them. */
+    .preview-column { position: static; }
+}
+
+.panel {
+    padding: var(--spacing-5);
+    /* No border. The background already separates it from the page, and an outline around a column
+       of controls is one line the eye has to skip past to reach them. */
+    border-radius: var(--rounded-xl);
+    background: var(--bg-section);
+}
+
+.control { display: block; margin-bottom: var(--spacing-5); }
+.control:last-child { margin-bottom: 0; }
+
+.control-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-2);
+    font-size: var(--text-size-label);
+    font-weight: 600;
+}
+
+.control-row output {
+    font-family: var(--font-mono);
+    font-size: var(--text-size-small);
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+    color: var(--fg-muted);
+}
+
+.control input[type="range"] { width: 100%; accent-color: var(--fg-body); }
+
+.control-note {
+    margin-top: 6px;
+    font-size: var(--text-size-small);
+    color: var(--fg-faint);
+    text-wrap: pretty;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    font-size: var(--text-size-label);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.toggle input { accent-color: var(--fg-body); width: 16px; height: 16px; }
+
+/* The continuity switch decides what every other control means, so it reads as a
+   heading rather than as one more checkbox in a list. */
+.panel-group {
+    margin: var(--spacing-6) 0 var(--spacing-4);
+    padding-bottom: var(--spacing-2);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+}
+
+/* Read back out of the drawn path, never recomputed -- see the comment on derived()
+   in index.html. */
+.derived {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px var(--spacing-3);
+    margin: 0;
+    font-size: var(--text-size-small);
+}
+
+.derived dt { color: var(--fg-muted); }
+.derived dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--fg-body);
+}
+
+/* CONTINUITY OFF: the plain border-radius corner, for comparison. Done in CSS rather
+ * than by clearing what corner-js wrote, so the state is one attribute and reversible.
+ * !important is needed twice, and both times against the module's OWN inline styles:
+ * it writes clip-path onto the target, plus `box-shadow: none` and
+ * `border-color: transparent` because a clip would swallow them. With the clip gone
+ * those two have to come back, and a stylesheet cannot outrank an inline style
+ * otherwise. (sheet.css does the same for its fallback mode, for the same reason.) */
+.stage[data-continuity="off"] .preview {
+    clip-path: none !important;
+    /* Both restate what the live rule declared, because corner-js has written
+       `box-shadow: none` and `border-color: transparent` inline -- a clip would have
+       swallowed them -- and with the clip gone they have to come back. The values
+       arrive as --demo-* from the same generated rule; a stylesheet cannot outrank an
+       inline style any other way. */
+    box-shadow: var(--demo-shadow, none) !important;
+    border-color: var(--demo-border-color, transparent) !important;
+}
+
+.stage[data-continuity="off"] [data-corner-shadow-wrap] > svg { display: none; }
+
+/* An ARTBOARD, and deliberately the one thing on the page that does not follow the
+   colour scheme. Two reasons, both about what is being demonstrated:
+   - a drop shadow is black, so on a dark ground it is invisible -- the shadow toggle
+     would appear to do nothing in dark mode;
+   - the first version used --bg-section / --bg-surface, which in dark mode are #1b1b1b
+     against #1f1f1f: the preview box vanished into its own stage entirely. */
+/* STICKY AS ONE UNIT -- the artboard and the generated code together, because the code
+ * is the other half of what you are watching: it is the rule that produced the shape on
+ * screen, so it has to stay next to it while the control column scrolls.
+ *
+ * The stage was sticky on its own first, which held the shape but let the code slide
+ * away underneath it -- exactly the wrong half to lose.
+ *
+ * Bounded by the viewport, so a tall column cannot push its own bottom off screen: the
+ * artboard gives up height first (it has a floor), and the code panel keeps whatever is
+ * left and scrolls inside itself. */
+/* The whole column is pinned -- artboard and generated code together -- because both are answers
+   to the controls beside them. It only holds as long as the column fits the viewport, which is why
+   the generated snippet carries no prose: a sticky box taller than the viewport leaves the screen
+   before its bottom arrives, and that is what took the artboard away early. */
+.preview-column {
+    position: sticky;
+    top: calc(var(--header-height) + var(--spacing-4));
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+}
+
+.stage-holder { width: 100%; }
+
+.stage {
+    display: grid;
+    place-items: center;
+    /* The SIZE and the flex behaviour sit on the wrapper below, since this is a corner.js target
+       now and the module writes width/height: 100% onto it. */
+    width: 100%;
+    height: 100%;
+    padding: var(--spacing-6);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--rounded-xl);
+    /* A checkerboard, so a clip-path that is off by a pixel shows up instead of
+       hiding against a flat field. */
+    background-color: var(--stage-colour, #ececec);
+    /* Pinch and drag, so the curve can be inspected at any scale. The board takes the gestures
+       itself, which is why the browser must not also act on them. */
+    touch-action: none;
+    cursor: grab;
+}
+
+.stage[data-grabbing],
+.hero-demo-stage[data-grabbing] { cursor: grabbing; }
+
+.hero-demo-stage { cursor: grab; }
+
+/* The transform goes on the layer both shapes share, not on the wrapper corner.js inserted: the
+   red arc is the wrapper's SIBLING, so moving the wrapper alone pulled the comparison apart as
+   soon as you zoomed. Same reason the hero transforms its stack.
+   A transform is invisible to the module's own measurement -- it reads the layout box. */
+.preview-stack {
+    transform: translate(var(--view-x, 0px), var(--view-y, 0px)) scale(var(--view-zoom, 1));
+    transform-origin: top left;
+}
+
+.stage[data-background="transparent"] {
+    background-color: #ececec;
+    background-image:
+        linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25% 75%, rgba(0, 0, 0, 0.05) 75%),
+        linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25% 75%, rgba(0, 0, 0, 0.05) 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+}
+
+/* The playground's target. Its radius, smoothing, border and shadow are all set
+   from JS as INLINE styles, because that is exactly what the generated snippet
+   does -- the code on screen is the code that ran. */
+.preview {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 200px;
+    font-size: var(--text-size-label);
+}
+
+/* The LABEL blends, not the box. Putting mix-blend-mode on .preview itself blended the
+   object with the artboard -- invisible while both were grey, and wrong the moment a
+   colour is picked. `difference` keeps the text legible on a white object and on a
+   black one without the page having to know which. */
+.preview span {
+    color: #808080;
+    mix-blend-mode: difference;
+}
+
+/* The border and the shadow live HERE, toggled by a data attribute, and not as
+ * inline styles from the playground's JS. That is not a style preference -- it is
+ * forced by the module:
+ *
+ *   refresh(el, { reread: true }) calls resetElement, which does
+ *   `el.style.boxShadow = ''` in order to undo the module's own `box-shadow: none`.
+ *   An inline shadow set by the page is indistinguishable from that and gets wiped
+ *   in the same line, so the shadow was gone before applyOnce could read it: the
+ *   toggle drew nothing at all. (The border survived only by accident -- resetElement
+ *   clears `borderColor`, so an inline `border` shorthand keeps its width and style.)
+ *
+ * From the stylesheet, getComputedStyle reads it back on every run, which is what
+ * the module's whole "the shadow is read from the element" contract assumes. */
+.preview[data-border="on"] { border: 1px solid rgba(0, 0, 0, 0.28); }
+.preview[data-shadow="on"] { box-shadow: 0 15px 30px rgba(0, 0, 0, 0.14); }
+
+/* THE WRAPPER CARRIES THE SIZE. Not a preference -- corner-js inserts
+ * [data-corner-shadow-wrap] between a target and its parent and then writes
+ * `width: 100%; height: 100%` onto the target as INLINE styles (see
+ * ensureShadowWrapper), because the target used to size itself against the grid or
+ * flex cell that is now the wrapper. Two consequences for any stylesheet:
+ *
+ *   - a fixed size declared on the target is overridden. `.preview { height: 200px }`
+ *     lost to the inline `height: 100%`, which resolves against a height: auto
+ *     wrapper and therefore against its own content: the box collapsed to the height
+ *     of its "320 x 200" label.
+ *   - so did `width: min(320px, 100%)`, one axis earlier, for the same reason with
+ *     the wrapper's shrink-to-fit width.
+ *
+ * The README describes this for percentage heights on the target; the stronger form
+ * is that the target is ALWAYS percentage-sized after boot, so any real dimension
+ * has to sit on the wrapper. Content-sized things (buttons, badges, inputs) need
+ * nothing: 100% against an auto wrapper is auto, and their padding still applies. */
+/* Driven by the playground's Size slider, which sets --preview-size on .stage. Resizing
+   the wrapper is a genuine layout change, so corner-js's own ResizeObserver redraws the
+   path without being told. Square by construction -- one variable on both axes. */
+[data-corner-shadow-wrap]:has(> .preview) {
+    width: var(--preview-size, 240px);
+    height: var(--preview-size, 240px);
+}
+[data-corner-shadow-wrap]:has(> .d-avatar) { width: 56px; height: 56px; }
+[data-corner-shadow-wrap]:has(> .d-tile) { width: 100%; height: 120px; }
+
+[data-corner-shadow-wrap]:has(> .d-card),
+[data-corner-shadow-wrap]:has(> .d-input),
+[data-corner-shadow-wrap]:has(> .d-dialog) { width: 100%; }
+
+/* No inner scrollbar: the panel grows to its content and the page is the only thing that
+   scrolls. A scroll container inside a scroll container hides half the snippet behind a
+   gesture nobody expects to need. */
+.code {
+    flex: 1 1 auto;
+    min-height: 120px;
+    /* The head carries its own background, and a border-radius does not clip a child's background
+       -- only the element's own. Without this its square corners sat on top of the panel's curve.
+       hidden clips; it creates no scrollbar, since nothing inside overflows any more. */
+    overflow: hidden;
+    /* 10% black on white could not be seen. This is also the line corner.js strokes along the
+       curve where the panel is one of its targets. */
+    border: 1px solid var(--border-strong);
+    border-radius: var(--rounded-xl);
+}
+
+.code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    background: var(--bg-section);
+}
+
+.code-head-split { border-top: 1px solid var(--border-subtle); }
+
+/* Long lines WRAP rather than scroll sideways. Code that wraps is still readable; code behind
+   a horizontal scrollbar is not, and in a two-panel layout that bar is easy to miss entirely. */
+.code pre {
+    margin: 0;
+    padding: var(--spacing-4);
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: var(--bg-surface);
+}
+
+button.ghost {
+    padding: 5px 11px;
+    font: 600 var(--text-size-small) var(--font-body);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--rounded);
+    cursor: pointer;
+}
+
+button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); }
+
+/* Two snippets side by side where there is room for both. auto-fit rather than a count, so the
+   pair collapses on its own when a component would get less than 44 characters wide. */
+.code-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr));
+    gap: var(--spacing-5);
+    margin-top: var(--spacing-6);
+    align-items: start;
+}
+
+/* ---------- history ---------- */
+
+/* Even halves. Every uneven split tried here -- phi, 30/70, 40/60 -- read as a column that had
+   missed its width rather than as a decision. */
+.history-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-8);
+    align-items: start;
+}
+
+/* Sticky, and it fits: the head is a heading plus three lines, well short of a viewport -- which
+   is the condition the playground column failed. */
+.history-head {
+    position: sticky;
+    top: calc(var(--header-height) + var(--spacing-5));
+    margin-bottom: 0;
+    max-width: none;
+}
+
+.history-head p { text-wrap: pretty; }
+
+@media (max-width: 860px) {
+    .code-tablist { margin-inline: auto; }
+    .code-tabpanel { margin-inline: auto; }
+}
+
+@media (max-width: 860px) {
+    .history-grid { grid-template-columns: minmax(0, 1fr); gap: var(--spacing-5); }
+    .history-head { position: static; margin-bottom: var(--spacing-5); }
+}
+
+/* ---------- faq ---------- */
+
+/* One card per question. Each card is a corner.js target, so the section is also the last
+   demo on the page -- and opening one resizes it, which is the ResizeObserver redrawing. */
+/* The one centred section on the page. A stack of questions has no left column to align to. */
+#faq .section-head {
+    max-width: 54ch;
+    margin-inline: auto;
+    text-align: center;
+}
+
+.faq {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    max-width: 78ch;
+    margin-inline: auto;
+}
+
+.faq details {
+    padding-inline: var(--spacing-5);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--rounded-xl);
+    background: var(--bg-surface);
+}
+
+.faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-4);
+    padding-block: var(--spacing-4);
+    font-size: clamp(17px, 1.3vw, 19px);
+    font-weight: 510;
+    /* The whole row is the hit target; the marker below replaces the native triangle. */
+    list-style: none;
+    cursor: pointer;
+}
+
+.faq summary::-webkit-details-marker { display: none; }
+
+.faq summary::after {
+    content: "+";
+    flex: none;
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--fg-faint);
+}
+
+.faq details[open] summary::after { content: "\2013"; }
+
+.faq summary:hover::after { color: var(--fg-body); }
+
+.faq details p {
+    max-width: 66ch;
+    padding-bottom: var(--spacing-5);
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    color: var(--fg-muted);
+    text-wrap: pretty;
+}
+
+/* ---------- component demos ---------- */
+
+/* Three at most, and auto-fit below that so the row breaks on its own rather than at a
+   breakpoint: past three the cells get small enough that the corner is the least of what you
+   see in them. */
+.demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    gap: var(--spacing-5);
+}
+
+@media (min-width: 960px) {
+    .demo-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.demo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding: var(--spacing-5);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--rounded-xl);
+    background: var(--bg-section);
+}
+
+.demo-label {
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+}
+
+.demo-body { display: flex; flex-grow: 1; flex-wrap: wrap; align-items: center; gap: var(--spacing-4); }
+
+/* Every demo target below carries border-radius + --corner-smoothing in CSS and
+   data-module="corner-shape" in the markup. corner-js reads the radius as the
+   construction's INPUT, so these values are the shape, not a fallback. */
+
+.d-button {
+    padding: 11px 20px;
+    font: 600 var(--text-size-label) var(--font-body);
+    color: var(--bg-base);
+    background: var(--fg-body);
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+}
+
+.d-button.secondary {
+    color: var(--fg-body);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+}
+
+/* Opacity, not a second colour: the fill is --fg-body and the demo is about the silhouette, so the
+   hover must not introduce a colour the shape has to compete with. */
+.d-button:hover { opacity: 0.85; }
+.d-button.secondary:hover { opacity: 1; border-color: var(--border-strong); }
+.d-button:active { transform: translateY(1px); }
+
+.d-card {
+    width: 100%;
+    height: 100%;
+    padding: var(--spacing-5);
+    border-radius: 20px;
+    background: var(--bg-surface);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
+}
+
+.d-card h3 { font-size: var(--text-size-body); }
+.d-card p { margin-top: 6px; font-size: var(--text-size-detail); color: var(--fg-muted); }
+
+.d-input {
+    width: 100%;
+    padding: 11px 14px;
+    font: var(--text-size-label) var(--font-body);
+    color: var(--fg-body);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+}
+
+/* The ring has to match the input's radius, not carry one of its own -- 14px was a guess that
+   did not correspond to anything. The input declares 12px, and the ring sits 2px outside it, so
+   its own radius is 12 + 2. corner-shape follows the input's too, or the ring is a rounded
+   rectangle around a squircle. */
+/* THE FOCUS RING, as an element of its own. An outline is a rounded rectangle whatever the
+   element's silhouette is, and a box-shadow on the input is cut by the very clip-path that draws
+   the corner -- so the ring is a sibling that corner.js draws too, 3px larger on every side and
+   sitting behind the opaque input. isolation, so z-index -1 stays inside the field and does not
+   fall behind the tile it sits in. */
+.d-field {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+}
+
+.focus-ring {
+    position: absolute;
+    inset: -3px;
+    z-index: -1;
+    border-radius: calc(12px + 3px);
+    background: var(--focus);
+    opacity: 0;
+}
+
+.d-input:focus-visible { outline: none; }
+.d-input:focus-visible ~ .focus-ring { opacity: 1; }
+
+.d-avatar {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    font: 700 var(--text-size-label) var(--font-body);
+    color: var(--bg-base);
+    background: var(--fg-body);
+    /* 14, not 28. At half the box (28 of 56) the radius spends the whole budget of
+       min(w, h) / 2 and the reach -- (1 + smoothing) * radius -- has nothing left, so the corner
+       came out a plain circle while this comment claimed a squircle. A quarter of the box is the
+       largest radius that still leaves room for smoothing at 1. */
+    border-radius: 14px;
+}
+
+.d-badge {
+    padding: 4px 10px;
+    font: 600 var(--text-size-small) var(--font-body);
+    color: var(--fg-body);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+}
+
+/* A photograph is the honest test of a clip: a flat fill hides where the curve actually runs, and
+   an <img> is a replaced element, which a div never exercises. */
+/* The HEIGHT lives on the wrapper, not on the image: an image that has not loaded has no intrinsic
+   size, and corner.js writes height:100% onto a target it wrapped, which left nothing to resolve
+   against and collapsed the tile to nothing. */
+.d-media {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+}
+
+.d-photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 22px;
+    background: var(--bg-section);
+}
+
+.d-photo-round { border-radius: 40px; }
+
+/* A shadow on the image itself, so the filter has to rebuild it around a replaced element. */
+.d-photo-shadow { box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18); }
+
+.d-dialog {
+    width: 100%;
+    padding: var(--spacing-5);
+    border-radius: 26px;
+    background: var(--bg-surface);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.14);
+}
+
+.d-dialog-actions { display: flex; gap: var(--spacing-3); margin-top: var(--spacing-4); }
+
+/* ---------- prose + tables ---------- */
+
+.prose { max-width: 68ch; }
+.prose p,
+.prose li {
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    color: var(--fg-muted);
+    text-wrap: pretty;
+}
+
+.prose p { margin-top: var(--spacing-4); }
+.prose p:first-child { margin-top: 0; }
+.prose strong { color: var(--fg-body); }
+.prose ul { margin: var(--spacing-4) 0 0; padding-left: 1.2em; color: var(--fg-muted); }
+.prose li { margin-bottom: var(--spacing-2); text-wrap: pretty; }
+
+/* The timeline needs no bullets: every entry opens with its own year in bold, which marks it more
+   plainly than a disc would. Without the marker the indent has nothing to hang off either, so the
+   entries run flush and carry the separation in the gap instead. */
+#history .prose ul {
+    padding-left: 0;
+    list-style: none;
+}
+
+#history .prose li { margin-bottom: var(--spacing-5); }
+
+.table-scroll { overflow-x: auto; margin-top: var(--spacing-5); }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-size-detail);
+}
+
+th, td {
+    padding: var(--spacing-3) var(--spacing-4);
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+th { font-weight: 600; color: var(--fg-faint); font-size: var(--text-size-small);
+     letter-spacing: 0.06em; text-transform: uppercase; }
+
+td { color: var(--fg-muted); }
+td:first-child { color: var(--fg-body); white-space: nowrap; }
+
+.site-footer {
+    padding-block: var(--spacing-8);
+    margin-top: var(--spacing-8);
+    border-top: 1px solid var(--border-subtle);
+    font-size: var(--text-size-detail);
+    color: var(--fg-faint);
+}
+
+/* Copyright left, licence right; stacked and centred once the two would meet. */
+.footer-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-3) var(--spacing-5);
+}
+
+@media (max-width: 640px) {
+    .footer-row {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
+
+.site-footer a { color: var(--fg-muted); }
+.site-footer a:hover { color: var(--fg-body); text-decoration: underline; }
+
+/* Body copy is --fg-muted and its links inherit that. On hover they go to full black, and since the
+   underline is currentColor the rule under the word darkens with it. */
+p a:hover,
+li a:hover,
+td a:hover { color: var(--fg-body); }
+
+/* A colour well, not a slider -- the one place a range control cannot express the
+   value. */
+.swatch { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-3);
+          font-size: var(--text-size-label); font-weight: 600; cursor: pointer; }
+.swatch input[type="color"] {
+    width: 44px; height: 26px; padding: 0; cursor: pointer;
+    background: none; border: 1px solid var(--border-default); border-radius: var(--rounded);
+}
+.swatch input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+.swatch input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+
+/* The one control that is a choice rather than a value, so it is a select and not a
+   slider. Sized to the panel, because the native widget's own width is its longest
+   option and that pushed it out of the column. */
+.panel select {
+    width: 100%;
+    margin-top: var(--spacing-2);
+    padding: 8px 10px;
+    font: 500 var(--text-size-label) var(--font-body);
+    color: var(--fg-body);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--rounded);
+}
+
+.control-row-lead { font-size: var(--text-size-body); }
+
+/* ---------- the hero's comparison ---------- */
+
+/* TEXT gets the phi share, not the graphic. Either assignment is golden; this one is
+   because the hero is text-led -- a five-line lede in the 1 track would be a column about
+   38 characters wide. */
+.hero-grid {
+    display: grid;
+    grid-template-columns: var(--golden-fr) minmax(0, 1fr);
+    gap: var(--spacing-8);
+    align-items: center;
+}
+
+@media (max-width: 860px) {
+    .hero-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.hero-demo { display: flex; flex-direction: column; gap: var(--spacing-4); }
+
+/* BELOW the board, beside the caption: the board is what you look at, so nothing sits above it
+   competing for the first glance. The caption takes the space and the switches sit at the end of
+   the row, which also puts them next to the words that describe what they change. */
+.hero-demo-foot {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-5);
+    flex-wrap: wrap;
+}
+
+.hero-demo-switches {
+    display: flex;
+    /* A row, wrapping under the caption when the column is too narrow to hold both -- which at
+       this width it is, so "beside the caption" only happens on a wide viewport. Better than
+       forcing it: a two-line caption next to a stacked pair of switches was worse than either. */
+    gap: var(--spacing-5);
+    align-items: center;
+}
+
+/* Same switch as the panel's, so a control that does the same thing looks the same in both
+   places. The tick-in-a-button version it replaces had to mirror its state into
+   aria-pressed by hand; a checkbox carries it. */
+.hero-demo-switches .toggle { gap: var(--spacing-3); }
+
+/* A drafting board: faint rules at the quarters, so the two curves can be judged against
+   something straight rather than against each other alone. SQUARE, and as large as the
+   column allows -- the whole difference between the two curves is a few pixels of
+   silhouette, so every pixel of scale is one more that can be seen. */
+.hero-demo-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    /* Shows ONE corner at --hero-zoom, the way Figma's own illustration does: the whole shape at
+       this scale would not fit, and the whole shape is not what has to be looked at. */
+    overflow: hidden;
+    /* NO aspect ratio. The board is a window onto a magnified corner, so its proportion carries no
+       meaning -- it only has to be tall enough to hold one. A ratio here was left over from when it
+       framed the whole shape.
+     *
+       The SIZE sits on the wrapper below, not here: the board is a corner.js target now, so the
+       module writes width/height: 100% onto it and a min-height declared here would lose. */
+    width: 100%;
+    height: 100%;
+    padding: var(--spacing-4);
+    /* The construction's INPUT now, not just a fallback shape: the board's own corners are drawn
+       by corner.js as well, so the page's frame is the thing the page is about. */
+    border-radius: 18px;
+    /* The frame belongs to the BOARD, and corner.js strokes it along the exact curve it clipped --
+       so the one border on this figure is itself an example of what the page is about. */
+    border: 1px solid var(--border-subtle);
+    background-color: var(--bg-section);
+    /* A denser rule, and in PIXELS rather than percent: percentages of a golden box give
+       oblong cells, and a grid whose cells are not square is a poor thing to judge a curve
+       against. */
+    background-image:
+        linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px);
+    background-size: 20px 20px;
+    /* Half a cell in, so no grid line lands ON the outer edge. Unoffset, the first line of each
+       gradient sits at 0 and reads as a border down the left and along the top -- while the right
+       and bottom get one only when the box happens to be a multiple of the cell. The frame above
+       is the edge; the grid stays interior. */
+    background-position: 10px 10px;
+}
+
+/* NO FIRST PAINT OF THE UNDRAWN SHAPE. corner.js is loaded async, so the first frame would show
+   the plain rounded rectangle and the next one the clipped curve -- at this radius that swap is a
+   visible pop. The stack waits for the module instead: data-drawn is set once corner.js exists.
+ *
+   ONLY when the page opens at the top, though. Reloading further down, the browser paints at
+   scroll 0 before restoring the offset, so this fade played in the corner of the screen for a
+   frame on the way past -- a flicker introduced by the cure for a flicker. The script sets
+   data-restored in that case and the stack is simply there. */
+html:not([data-restored]) .hero-demo-stack { opacity: 0; }
+
+html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
+    opacity: 1;
+    transition: opacity 140ms ease;
+}
+
+/* THE INTRO. Each layer arrives out of focus and sharpens, top down -- nothing moves, so the page
+   is already where it belongs while it comes in. Same data-restored guard as the stack above: a
+   reload further down the page must not play this in the corner of the screen on the way past. */
+@media (prefers-reduced-motion: no-preference) {
+    html:not([data-restored]) [data-reveal] .hero-copy > *,
+    html:not([data-restored]) [data-reveal] .hero-demo {
+        opacity: 0;
+        filter: blur(10px);
+    }
+
+    html:not([data-restored]) [data-reveal="running"] .hero-copy > *,
+    html:not([data-restored]) [data-reveal="running"] .hero-demo {
+        opacity: 1;
+        filter: blur(0);
+        transition: opacity 460ms ease calc(var(--i, 0) * 110ms),
+                    filter 620ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 110ms);
+    }
+
+    .hero-copy > :nth-child(2) { --i: 1; }
+    .hero-copy > :nth-child(3) { --i: 2; }
+    .hero-copy > :nth-child(4) { --i: 3; }
+
+    /* Last, and only just: side by side it reads as one movement rather than two. */
+    .hero-demo { --i: 3; }
+}
+
+/* Both layers are the same box and the same radius, so nothing but the curve differs. The
+   OUTLINE is the absolutely positioned one and the filled continuous shape is not,
+   deliberately: corner-js measures its target, and an absolutely positioned target
+   collapses the wrapper it inserts to height 0 -- nothing would be drawn at all. So the
+   layer that needs no module is the one taken out of flow. */
+.hero-demo-stack {
+    position: relative;
+    display: block;
+    width: var(--hero-shape);
+    height: var(--hero-shape);
+    /* Anchored at the top-left corner and scaled from it, with a small offset so a little of both
+       straight edges stays in frame -- a corner with no edge either side of it is hard to read as
+       a corner. The three values are written by the pan/zoom handler; the fallbacks are what
+       shows before it runs. */
+    transform: translate(var(--view-x, 8%), var(--view-y, 8%)) scale(var(--view-zoom, 3));
+    transform-origin: top left;
+}
+
+/* BOTH curves as lines, in two colours, over a fill faint enough not to compete. Blue is the
+   continuous path and RED is the arc, and the blue one is not drawn by this stylesheet: the
+   element carries a border, so corner.js strokes an SVG along the exact path it clipped. The
+   line is the construction's own output, not a second approximation of it.
+ *
+   Two outlines beat one outline over a solid fill, which is what this was: the fill's own edge
+   was white on grey and the eye had to compare a line against a low-contrast boundary. Two lines
+   of different hue can be compared directly, and where they coincide they overlap. */
+/* OPAQUE, and ON TOP of an opaque arc behind it -- Figma's own way of showing this in
+   "Desperately seeking squircles", and it works where my two earlier attempts did not. Outlines
+   showed only the boundary and the eye had to judge the space between them; a translucent tint at
+   inset 0 covered the whole shape, because the two silhouettes coincide along every straight edge.
+   Two opaque fills, one over the other, leave the difference as visible colour: red wherever the
+   arc reaches past the continuous curve, blue wherever the continuous curve reaches past the arc. */
+.hero-demo-shape {
+    position: relative;
+    z-index: 2;
+    display: block;
+    width: var(--hero-shape);
+    height: var(--hero-shape);
+    background: var(--compare-drawn);
+    /* NO border on this layer. It carried a 1px one, drawn by corner.js along the exact path -- and
+       that is precisely where the red sliver is, so at 3x the 3px stroke covered the thing it sat
+       next to. The board above carries the frame instead, and this layer stays a pure silhouette so
+       the comparison has nothing over it. */
+    /* The construction's input. Large enough that the difference is visible at all --
+       below about sixteen the two curves are indistinguishable, which is exactly why
+       border-radius went unquestioned for so long. */
+    border-radius: var(--hero-radius);
+}
+
+[data-corner-shadow-wrap]:has(> .hero-demo-shape) {
+    position: relative;
+    /* The wrapper is what actually stacks, since corner.js inserts it between the stack and the
+       shape -- a z-index on the target alone would sit inside it and lose to the arc. */
+    z-index: 2;
+    width: var(--hero-shape);
+    height: var(--hero-shape);
+}
+
+/* ON TOP of the fill, as a LINE. A filled tint was tried and is wrong: the two silhouettes
+   coincide along the straight edges and differ only near each corner's apex, so a tint at
+   inset 0 covers essentially the whole shape and the difference disappears into it. The line
+   is 2px rather than 1 because what it has to show is a few pixels wide.
+ *
+   The colour is deliberately not in the rest of the palette. It is a measurement, not
+   decoration. */
+.hero-demo-arc {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: var(--compare-arc);
+    border-radius: var(--hero-radius);
+    pointer-events: none;
+}
+
+[data-comparison="off"] .hero-demo-arc { display: none; }
+
+/* Smoothing off: unclip the fill, which leaves precisely the arc the outline traces --
+   so with the comparison on, the line lands exactly on the edge. */
+/* Smoothing off unclips the blue shape, which leaves precisely the arc underneath it -- so the
+   blue covers the red exactly and no colour shows at all. That is the clearest available statement
+   that 0% smoothing IS border-radius. */
+
+
+.hero-demo-caption { display: flex; flex-direction: column; gap: 4px; }
+.hero-demo-caption strong { font-size: var(--text-size-detail); }
+.hero-demo-caption span { font-size: var(--text-size-detail); color: var(--fg-muted); }
+
+/* ---------- the panel as tabs, one column only ---------- */
+
+/* Two columns: no tabs at all. The panel is a plain scrolling list beside a sticky
+   artboard, which is the better shape when there is room for both. */
+.panel-tabs { display: none; }
+
+.panel[data-tabs="on"] .panel-tabs {
+    display: flex;
+    gap: 6px;
+    margin: calc(-1 * var(--spacing-2)) calc(-1 * var(--spacing-5)) var(--spacing-5);
+    padding: 0 var(--spacing-5);
+    /* Scrolls sideways rather than wrapping to three rows of chips on a narrow phone. */
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.panel[data-tabs="on"] .panel-tabs::-webkit-scrollbar { display: none; }
+
+.panel-tab {
+    flex: none;
+    padding: 7px 13px;
+    font: 600 var(--text-size-small) var(--font-body);
+    white-space: nowrap;
+    color: var(--fg-muted);
+    background: transparent;
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+    cursor: pointer;
+}
+
+.panel-tab[aria-pressed="true"] {
+    color: var(--bg-base);
+    background: var(--fg-body);
+    border-color: var(--fg-body);
+}
+
+/* Only the open section, and its heading is dropped: the tab already names it, and two
+   labels for one thing is how a panel starts to feel crowded. */
+.panel[data-tabs="on"] .panel-section { display: none; }
+.panel[data-tabs="on"] .panel-section.is-open { display: block; }
+.panel[data-tabs="on"] .panel-section .panel-group { display: none; }
+.panel[data-tabs="on"] .panel-section > :first-child { margin-top: 0; }
+
+/* ---------- stacked: label, slider and value on ONE row ---------- */
+
+/* Hung off the same [data-tabs] attribute the tab mode uses rather than a second media
+   query -- one switch, one source of truth, and it can be forced on to test.
+ *
+ * Two rows per control (label above, slider below) is the right shape in a narrow column
+ * beside a sticky artboard, where the panel has all the height it wants. Stacked, the
+ * artboard is above the panel and every saved row is one less scroll: label left, slider
+ * in the middle, value right. */
+.panel[data-tabs="on"] .control {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--spacing-3);
+    margin-bottom: var(--spacing-4);
+}
+
+/* The row wrapper stops being a box and lets its two children fall into the grid
+   directly, so no markup has to move. */
+.panel[data-tabs="on"] .control-row { display: contents; }
+/* The ROW is explicit as well as the column, and it has to be: auto-placement is sparse,
+   so once the output had been placed in column 3 the cursor sat past it and the slider --
+   column 2, row auto -- was pushed onto a second row. Measured: label at y 322, slider at
+   345, which is the two-row layout this was meant to replace. */
+.panel[data-tabs="on"] .control-label { grid-area: 1 / 1; white-space: nowrap; }
+.panel[data-tabs="on"] .control input[type="range"] { grid-area: 1 / 2; }
+.panel[data-tabs="on"] .control-row output { grid-area: 1 / 3; text-align: right; }
+/* Notes span the full width underneath, where they read as a footnote to the row rather
+   than as part of it. */
+.panel[data-tabs="on"] .control-note { grid-area: 2 / 1 / auto / -1; margin-top: 4px; }
+
+/* Toggles and colour wells are already single-row; they only need the same rhythm. */
+.panel[data-tabs="on"] .toggle,
+.panel[data-tabs="on"] .swatch { margin-bottom: var(--spacing-4); }
+
+/* ---------- iOS-style switches, and a flat select ---------- */
+
+/* A real checkbox underneath, restyled -- not a div pretending. It keeps the label
+   association, the keyboard behaviour and :checked for free, which a faked switch has to
+   reimplement badly.
+ *
+ * The knob is a background-image rather than a pseudo-element: ::after on a replaced
+ * element is widely relied on but not actually guaranteed, while a radial-gradient moved
+ * with background-position is plain CSS on a plain box. It also animates on the compositor
+ * rather than through layout. */
+.toggle input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    width: 42px;
+    height: 26px;
+    margin: 0;
+    border-radius: 9999px;
+    border: 1px solid var(--border-default);
+    background-color: var(--bg-section);
+    background-image: radial-gradient(circle 9px at 13px 12px, var(--fg-muted) 99%, transparent 100%);
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    cursor: pointer;
+    transition: background-color 0.18s ease, background-position 0.18s ease,
+                border-color 0.18s ease;
+}
+
+.toggle input[type="checkbox"]:checked {
+    background-color: var(--fg-body);
+    background-image: radial-gradient(circle 9px at 13px 12px, var(--bg-base) 99%, transparent 100%);
+    background-position: 16px 0;
+    border-color: var(--fg-body);
+}
+
+.toggle input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* FLAT: the native control paints its own chrome (a bevelled well on macOS, a system
+   dropdown on Windows) which has nothing to do with the rest of the panel. appearance:none
+   removes the widget entirely -- including its arrow, which is why the chevron below has to
+   be drawn back. */
+.panel select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 32px;
+    cursor: pointer;
+}
+
+.panel select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+/* Two rotated borders rather than an SVG data URI, so the chevron takes its colour from a
+   variable and follows the light/dark switch without a second copy of the asset. Anchored
+   to the bottom of the row, since the select is the last thing in it. */
+.control:has(> select) { position: relative; }
+
+.control:has(> select)::after {
+    content: '';
+    position: absolute;
+    right: 13px;
+    bottom: 15px;
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid var(--fg-muted);
+    border-bottom: 1.5px solid var(--fg-muted);
+    rotate: 45deg;
+    translate: 0 -2px;
+    pointer-events: none;
+}
+
+/* The three-column row does not apply to the one control whose input is a select: it has
+   no value readout and needs the full width for its option text. */
+.panel[data-tabs="on"] .control:has(> select) { display: block; }
+
+/* ---------- the page's own chrome, with corner-shape switched on ---------- */
+
+/* NATIVE, not corner-js, and the choice is not laziness:
+ *
+ *   - every one of these is a flex or grid child, and corner-js inserts a wrapper between
+ *     the element and its parent -- which is how a percentage size, a `parent > child`
+ *     selector and a fixed dimension all quietly break. This page hit that twice while
+ *     being built.
+ *   - it costs no JavaScript and re-clips itself on every layout change.
+ *   - and it is the honest demonstration of the first tier: where the browser can draw the
+ *     shape, the module is supposed to step aside. The page should do the same.
+ *
+ * So the DEMOS stay corner-js (the continuous curve, which no corner-shape value can
+ * express) and the FURNITURE uses the superellipse the browser already has. Without support
+ * the whole block never applies and every radius below stays exactly what it was.
+ *
+ * --brm doubles the radius, because a squircle needs twice the border-radius to read as
+@supports (corner-shape: squircle) {
+    :root {
+        --brm: 2;
+        --rounded: calc(6px * var(--brm));
+        --rounded-lg: calc(9px * var(--brm));
+        --rounded-xl: calc(12px * var(--brm));
+    }
+
+    /* BOXES only. The capsules are deliberately absent -- see below. */
+    .panel,
+    .code,
+    .demo,
+    button.ghost,
+    .panel select,
+    .swatch input[type="color"],
+    .d-badge {
+        corner-shape: squircle;
+    }
+}
+
+/* NOT the capsules, and this was a real bug: the switches came out rounded in Safari and
+ * squarish in Chrome, from the same stylesheet. Chrome has corner-shape and drew a SQUIRCLE
+ * capsule -- flatter ends -- while Safari has no support, ignored the property and drew the
+ * circular capsule border-radius asks for.
+ *
+ * At a radius past half the shorter side the two shapes visibly disagree, and for a capsule the
+ * circular end IS the intended shape: an iOS switch, a pill and a chip are all capsules, not
+ * superellipses. So they keep plain border-radius and look the same in both engines.
+ *
+ * The general lesson for the @supports block above: it may only contain things whose corner is
+ * small relative to the box. Where the radius saturates, opting into a different corner family
+ * changes the silhouette rather than refining it. */
+.pill,
+.panel-tab,
+.toggle input[type="checkbox"] {
+    border-radius: 9999px;
+    corner-shape: round;
+}
+
+#license .section-head {
+    max-width: 52ch;
+    margin-inline: auto;
+    text-align: center;
+}
+
+/* Centred copy lives or dies on its line lengths: balance evens them instead of leaving one word
+   alone on the last line, which is what makes a centred block look lopsided. */
+#license .section-head p { text-wrap: balance; }
+
+/* The right column of the integration section. min-width 0, or the code panels inside it refuse
+   to shrink below their content and push the grid wider than the page. */
+.use-column { min-width: 0; }
+
+/* ---------- tabbed code examples ---------- */
+
+/* Centred, with air around it: the tab bar is a hinge between the prose above and the snippet
+   below, so it needs to sit apart from both rather than clamp to either. */
+.code-tabs { margin-block: calc(var(--spacing-8) * 1.75); }
+
+/* Code takes a measure like prose does. Full container width put 60-character lines in a
+   1200-pixel box, which reads as a wall rather than as a snippet. */
+.code-tabpanel {
+    max-width: 66ch;
+    /* 10% black on white was invisible -- the corner is native corner-shape here, so a flatter
+       curve at a small radius made it look square as well. Stronger line, larger radius. */
+    border-color: var(--border-strong);
+    border-radius: 16px;
+}
+
+.code-tablist {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+    width: max-content;
+    max-width: 100%;
+    /* Left, with the panel it belongs to: in two columns a centred pill row floated free of the
+       snippet under it. It centres again below the breakpoint, where the column is the page. */
+    margin: 0 0 var(--spacing-6);
+    padding: 5px;
+    border-radius: 9999px;
+    corner-shape: round;
+    background: var(--bg-section);
+}
+
+.code-tab {
+    padding: 9px 22px;
+    font: 500 var(--text-size-label) var(--font-body);
+    color: var(--fg-muted);
+    background: none;
+    border: 0;
+    border-radius: 9999px;
+    corner-shape: round;
+    cursor: pointer;
+}
+
+.code-tab:hover { color: var(--fg-body); }
+
+.code-tab[aria-selected="true"] {
+    color: var(--fg-body);
+    background: var(--bg-surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- features ---------- */
+
+/* Centred head, centred column, left-aligned lines: a centred list would start every line at a
+   different x, which is what makes centred body copy hard to read. */
+#features .section-head {
+    max-width: 58ch;
+    margin-inline: auto;
+    text-align: center;
+}
+
+.features {
+    max-width: 82ch;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+}
+
+/* No icon column and no emoji: the lead-in carries the row, which is quieter and stops the
+   ragged right edge from making a centred block look off-centre. */
+.features li {
+    padding: var(--spacing-4) 0;
+    border-top: 1px solid var(--border-subtle);
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    color: var(--fg-muted);
+    text-wrap: pretty;
+}
+
+.features li:last-child { border-bottom: 1px solid var(--border-subtle); }
+
+/* The underline sits on .link-text everywhere, so the external arrow never gets one. In a bold
+   lead-in that came out as a permanently underlined heading; there the arrow is enough to mark the
+   link, and the underline waits for hover. Body copy keeps its underline -- links are the same
+   colour as the text, so without it they would be findable only by hovering. */
+.features strong a .link-text { text-decoration: none; }
+.features strong a:hover .link-text { text-decoration: underline; }
+
+.features strong { font-weight: 600; color: var(--fg-body); }
+
+/* An inline code run must not break MID-TOKEN -- `data-corner="continuous"` split across two
+   lines reads as two things. nowrap was the wrong tool for that: it forbids breaking at the
+   spaces too, and one run came out 1338px wide on a 390px screen, which is where the horizontal
+   scrolling came from. These two break at spaces, and inside a token only when the token cannot
+   fit on a line by itself. */
+.features code,
+.faq code,
+.prose code {
+    word-break: normal;
+    overflow-wrap: break-word;
+}
+
+/* Present for a screen reader, absent for the eye -- the column is obvious from its contents,
+   and on a phone the word cost a column's worth of width. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ---------- the live framework checks ---------- */
+
+.framework-checks {
+    margin-top: var(--spacing-6);
+    padding: var(--spacing-5);
+    border: 1px solid var(--border-default);
+    border-radius: var(--rounded-xl);
+    background: var(--bg-section);
+}
+
+.framework-head p { margin-top: 6px; font-size: var(--text-size-detail); color: var(--fg-muted); }
+
+.framework-missing {
+    margin-top: 6px;
+    font-size: var(--text-size-small);
+    color: var(--fg-faint);
+    text-wrap: pretty;
+}
+
+/* Three columns at most: five mounts in one wrapped flex row left a ragged tail, and the cards are
+   all the same size, so a grid keeps them in line without any of them stretching. */
+.framework-mounts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+    gap: var(--spacing-5);
+    margin: var(--spacing-5) 0;
+    justify-items: center;
+}
+
+@media (min-width: 700px) {
+    .framework-mounts { grid-template-columns: repeat(3, 1fr); }
+}
+
+.framework-mount { display: flex; flex-direction: column; gap: 8px; }
+
+.framework-mount-label {
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+}
+
+/* Each framework mounts into its own stage, so one failing to load cannot take the others with it. */
+.framework-stage { width: 120px; height: 84px; }
+
+.framework-card {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font: 600 var(--text-size-small) var(--font-body);
+    color: rgba(255, 255, 255, 0.92);
+    background: linear-gradient(to right, #0f172a, #334155);
+    border-radius: 22px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.14);
+}
+
+/* The source is collapsed: it is proof, not reading material. */
+.framework-source { max-width: 320px; }
+
+.framework-source summary {
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    color: var(--fg-faint);
+    cursor: pointer;
+}
+
+.framework-source pre {
+    max-height: 260px;
+    margin-top: 8px;
+    padding: var(--spacing-3);
+    overflow: auto;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--rounded);
+}
+
+.framework-table { width: 100%; border-collapse: collapse; font-size: var(--text-size-detail); }
+.framework-table th,
+.framework-table td { padding: 8px 12px 8px 0; text-align: left; border-bottom: 1px solid var(--border-subtle); }
+.framework-table th { font-size: var(--text-size-small); text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-faint); }
+
+.check-pass { color: #1a7f43; }
+.check-fail { color: #c0392b; font-weight: 600; }
+
+/* A footnote under a section, telling you what the thing above it cannot promise. Was called
+   .lab-footnote after a gallery that no longer exists -- the paragraph outlived the section. */
+.section-footnote {
+    max-width: 68ch;
+    margin-top: var(--spacing-6);
+    font-size: var(--text-size-detail);
+    color: var(--fg-faint);
+    text-wrap: pretty;
+}
+
+.section-footnote strong { color: var(--fg-muted); }
+
+/* ---------- the support matrix ---------- */
+
+.support-table td:first-child { white-space: nowrap; }
+.support-table .support-state { font-weight: 600; white-space: nowrap; }
+.support-table tr[data-ok="true"] .support-state { color: var(--fg-body); }
+.support-table tr[data-ok="false"] .support-state { color: #c0453a; }
+
+/* The two rows nothing works without, marked in the row rather than in a legend. */
+.req {
+    margin-left: 6px;
+    padding: 2px 7px;
+    font-family: var(--font-body);
+    font-size: var(--text-size-small);
+    font-weight: 600;
+    color: var(--fg-faint);
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+}
+
+/* The column that applies in this browser, marked rather than ranked. */
+#drawTable [data-live="true"] { color: var(--fg-body); }
+#drawTable [data-live="false"] { color: var(--fg-faint); }
+#drawTable th[data-live="true"] { color: var(--fg-body); }
+
+.support-table .support-from { font-size: var(--text-size-small); color: var(--fg-muted); }
+
+/* The magnification, stated: a reader looking at a 9px sliver should know it is 3px of shape. */
+.hero-demo-zoom {
+    position: absolute;
+    right: var(--spacing-4);
+    bottom: var(--spacing-4);
+    /* ABOVE the shape, which carries z-index 2 and at any real zoom covers the whole board -- the
+       control was rendered behind it and invisible. */
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+}
+
+.hero-demo-zoom output {
+    min-width: 34px;
+    text-align: center;
+    font-size: var(--text-size-small);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-muted);
+}
+
+.hero-demo-zoom button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font: 600 14px/1 var(--font-body);
+    color: var(--fg-muted);
+    background: none;
+    border: 0;
+    border-radius: 9999px;
+    cursor: pointer;
+}
+
+.hero-demo-zoom button:hover { color: var(--fg-body); background: var(--bg-section); }
+
+/* The stage owns the gesture, so a two-finger pinch there is the demo's and not the page's. */
+.hero-demo-stage { touch-action: none; }
+
+/* Names the two colours, because a reader should not have to infer which fill is which. */
+.hero-demo-legend { display: flex; flex-wrap: wrap; gap: var(--spacing-4); font-size: var(--text-size-detail); }
+.hero-demo-legend span { display: inline-flex; align-items: center; gap: 7px; color: var(--fg-muted); }
+.hero-demo-legend i { width: 12px; height: 12px; border-radius: 3px; }
+.hero-demo-legend i.drawn { background: var(--compare-drawn); }
+.hero-demo-legend i.arc { background: var(--compare-arc); }
+
+/* ---------- the playground's comparison ---------- */
+
+/* The OBJECT's size, not the board's: the arc is inset: 0 of this, so a stack sized to the stage
+   made the red layer 270 square against a 240 object -- a 15px border of red on every side rather
+   than a sliver at the corners. */
+.preview-stack {
+    position: relative;
+    display: block;
+    width: var(--preview-size, 240px);
+    height: var(--preview-size, 240px);
+}
+
+/* Behind the preview, so red shows only where the arc reaches past the drawn curve -- the same
+   reading as the hero, and Figma's own way of showing it. */
+.preview-arc {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: none;
+    background: var(--compare-arc);
+    pointer-events: none;
+}
+
+.stage[data-compare="on"] .preview-arc { display: block; }
+.stage[data-compare="on"] [data-corner-shadow-wrap]:has(> .preview) { position: relative; z-index: 1; }
+.stage[data-compare="on"] .preview { position: relative; z-index: 1; }
+/* The label's colour is computed from the fill behind it -- see readableOn() in index.html -- so no
+   per-state override is needed here. */
+.stage[data-compare="on"] .preview span { mix-blend-mode: normal; }
+
+/* The board is a corner.js target, so the wrapper it inserts is what the flex column sees -- the
+   size has to live here or the board collapses against an auto-height wrapper. */
+[data-corner-shadow-wrap]:has(> .hero-demo-stage) {
+    width: 100%;
+    height: clamp(300px, 34vw, 420px);
+}
+
+/* Not in the @supports list any more: it draws its own corner through the clip, and opting it into
+   the browser's superellipse as well would put two different curves on one box. */
+
+/* The playground artboard is a corner.js target too, so the wrapper is what the sticky column sees:
+   it carries the square, the caps and the no-flex. NEVER flexes -- it shared a flex container with
+   the code panel, whose content length differs per curve, so picking a curve used to resize the
+   artboard under the shape. */
+[data-corner-shadow-wrap]:has(> .stage) {
+    flex: none;
+    /* NO aspect ratio, for the same reason the hero's board dropped it: this is a window onto an
+       object, not a frame that means something. It gets a height and takes the column's width, so a
+       wider column simply gives the object more room around it rather than growing the board into a
+       square the layout has to accommodate. */
+    width: 100%;
+    height: clamp(300px, 42dvh, 460px);
+}
+
+/* ---------- the support table ---------- */
+
+/* Three columns, so no phone special case is needed. What a feature is for and what happens without
+   it live under its name instead of in columns of their own. */
+.support-feature code { font-size: var(--text-size-detail); }
+.support-feature .support-role,
+.support-feature .support-without { display: block; margin-top: 4px; }
+.support-feature .support-role { color: var(--fg-muted); }
+.support-feature .support-without { font-size: var(--text-size-small); color: var(--fg-faint); }
+
+.support-from span { display: block; white-space: nowrap; }
+.support-link {
+    margin-left: 6px;
+    font-family: var(--font-body);
+    font-size: var(--text-size-small);
+    color: var(--fg-faint);
+}
+
+.support-minimum {
+    max-width: 68ch;
+    margin-top: var(--spacing-5);
+    font-size: var(--text-size-detail);
+    color: var(--fg-muted);
+}
+
+.support-minimum strong { color: var(--fg-body); }

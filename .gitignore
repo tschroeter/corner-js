@@ -1,0 +1,6 @@
+# build/ is NOT ignored: corner.min.js is what the demo loads and what npm ships.
+node_modules/
+.DS_Store
+*.log
+# Assembled by bin/deploy.js, never committed.
+dist/

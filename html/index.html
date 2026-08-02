@@ -1,0 +1,3158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continuous corners for the web — corner.js</title>
+<!-- Under 160 characters, or the tail is cut off in the result. -->
+<meta name="description" content="CSS squircle and continuous corners: a corner-shape polyfill that reads your border-radius and draws the curve as a clip-path, shadow and border included.">
+<link rel="canonical" href="https://tschroeter.com/corner-js">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tschroeter.com/corner-js">
+<meta property="og:title" content="Continuous corners for the web — corner.js">
+<meta property="og:description" content="Squircle and continuous corners for CSS. Reads border-radius, --corner-smoothing and box-shadow from your stylesheet and draws the curve corner-shape cannot: one vanilla JavaScript file, no dependencies, MIT.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Continuous corners for the web — corner.js">
+<meta name="twitter:description" content="Squircle and continuous corners for CSS. Reads border-radius, --corner-smoothing and box-shadow from your stylesheet and draws the curve corner-shape cannot: one vanilla JavaScript file, no dependencies, MIT.">
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "How do I get squircle corners in CSS?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "That depends on which curve you mean, and the difference is the point. A squircle is a superellipse: where the browser has corner-shape, one declaration does it, border-radius: 20px; corner-shape: squircle — corner.js only fills in where that property is missing, drawing the same curve as a clip-path. The Apple-like continuous corner has no CSS equivalent in any browser, so data-corner-js always draws. Either way the shape comes from the border-radius already in your stylesheet."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "What is the difference between a squircle and Apple’s corner?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A squircle is a superellipse, |x|^4 + |y|^4 = 1. Apple’s corner is not a superellipse at all: it is a circular arc with a cubic Bézier shoulder either side, which is why no single exponent reproduces it. By the definition, then, Apple's corner is not a squircle: it is a curvature-continuous corner — G2 to a draftsman. Figma reached the same conclusion by measuring the shape and publishing the attempt — Desperately seeking squircles — and derived a construction with a smoothing parameter instead of fitting one exponent. That construction is data-corner-js here."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "What does corner smoothing actually do?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It splits the 90° of a corner between an arc and two Bézier shoulders. --corner-smoothing: 0 leaves the whole angle as an arc, which is plain border-radius; 1 leaves no arc at all. Figma’s value for the Apple-like shape is 0.6, and it is the default here."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "Does corner-shape work in Safari and Firefox?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet — it is Chromium-only. The support table above measures the browser you are reading this in rather than quoting a version. corner.js is the fallback for the other two, and steps aside where the property exists."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "Why does my box-shadow disappear on a squircle?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Because clip-path removes box-shadow and filter: drop-shadow from the element it clips, and halves the width of its border. corner.js redraws both as sibling SVGs along the same path — which is why every drawn element is moved into a wrapper <div>: the siblings need an ancestor that is not clipped."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "Is there a React, Vue or Svelte binding?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No package and no boilerplate — plain vanilla JavaScript, inside all of them, and React, Vue, Solid and Turbo are mounted and measured live on this page. Drawing is not the hard part: data-corner-js in JSX or a template is enough for that, since nothing is encapsulated and the attribute lands in the real DOM. What matters is who owns the parent. corner.js moves every drawn element into a wrapper <div>, while the reconciler still holds the parent it rendered into — measured in Chrome, both removeChild and insertBefore then throw NotFoundError. So inside a framework subtree, render the wrapper yourself — it is reused, not replaced — and call apply on the container after mounting. The wrapper has to be positioned, because the shadow SVG anchors to the nearest positioned ancestor. The element keeps its own size, and it is only moved into a wrapper when a shadow or a border needs redrawing. See Integration."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "Can I animate or resize an element with a drawn corner?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It depends on what is moving. Transform and opacity: yes, with nothing to do — the path is measured in the layout box, which a transform does not touch, and it scales as vector along with the element. Size: yes — every element carries its own ResizeObserver, so a width or height animation redraws the path, the shadow and the border per frame. An animated border-radius does not follow. Nothing observes a style change: the box is unchanged, so no callback exists. The only two things watched are the box and the data-corner-js attribute. Drive it yourself — cornerjs.refresh(el) per frame is what the sliders above do on every input event."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "What is a superellipse, and who invented the squircle?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The curve is Gabriel Lamé’s, from 1818. The shape was popularized by Piet Hein for Stockholm’s Sergels torg in 1959, and the word “squircle” is younger than either. History has the sources."
+            }
+        }
+    ]
+}
+</script>
+<!-- TEST: Fira Sans in place of Inter. Static cuts only, so the headings' 510 rounds to 500 and
+     there is no optical-size axis to drive. Revert by putting the Inter line back:
+     family=Inter:opsz,wght@14..32,400..700 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
+<link rel="stylesheet" href="page.css?v=200305d8">
+<!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
+<script async src="../build/corner.min.js?v=4111d034"></script>
+</head>
+<body>
+<!-- The dimmed page behind an open nav panel. A sibling of the header, not a child: the header's
+     backdrop-filter would make it the containing block and the scrim would cover only the header. -->
+<div class="nav-scrim" id="navScrim" aria-hidden="true"></div>
+
+<header class="site-header">
+    <div class="wrap">
+        <a class="brand" href="#top">corner.js</a>
+        <!-- Shown only below the breakpoint; the nav below becomes a full-screen sheet. -->
+        <button class="nav-toggle" id="navToggle" type="button"
+                aria-expanded="false" aria-controls="siteNav" aria-label="Menu">
+            <span></span><span></span>
+        </button>
+        <!-- GROUPED, because twelve top-level links stopped fitting. Each group is a button plus a
+             panel: hover opens it on a mouse, click and Enter open it for touch and keyboard, and
+             below the breakpoint the panels are simply always open inside the sheet. -->
+        <nav class="site-nav" id="siteNav">
+            <button class="nav-close" id="navClose" type="button" aria-label="Close menu">
+                <span></span><span></span>
+            </button>
+
+            <a class="nav-link" href="#features">Features</a>
+
+            <div class="nav-group">
+                <button class="nav-trigger" type="button" aria-expanded="false"><span class="nav-trigger-label">Try</span><span class="nav-caret"></span></button>
+                <div class="nav-panel">
+                    <div class="nav-panel-inner">
+                        <p class="nav-panel-title">See it work</p>
+                        <div class="nav-panel-links"><a href="#playground">Playground</a>
+                    <a href="#components">Components</a></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <button class="nav-trigger" type="button" aria-expanded="false"><span class="nav-trigger-label">Use</span><span class="nav-caret"></span></button>
+                <div class="nav-panel">
+                    <div class="nav-panel-inner">
+                        <p class="nav-panel-title">Put it in a page</p>
+                        <div class="nav-panel-links"><a href="#use">Integration</a>
+                    <a href="#limits">Limitations</a>
+                    <a href="#support">Browser support</a></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <button class="nav-trigger" type="button" aria-expanded="false"><span class="nav-trigger-label">Internals</span><span class="nav-caret"></span></button>
+                <div class="nav-panel">
+                    <div class="nav-panel-inner">
+                        <p class="nav-panel-title">How it draws</p>
+                        <div class="nav-panel-links"><a href="#tiers">Drawing</a>
+                    <a href="#shape">Shape</a>
+                    <a href="#shadow">Shadow</a></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <button class="nav-trigger" type="button" aria-expanded="false"><span class="nav-trigger-label">Background</span><span class="nav-caret"></span></button>
+                <div class="nav-panel">
+                    <div class="nav-panel-inner">
+                        <p class="nav-panel-title">Where it comes from</p>
+                        <div class="nav-panel-links"><a href="#history">History</a>
+                    <a href="#faq">FAQ</a>
+                    <a href="#license">License</a></div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- LAST in the row, so it sits at the far right.
+             The mark is inline rather than a mask: a logo should not be reduced to an alpha channel. -->
+        <a class="site-github" href="https://github.com/tschroeter/corner-js" target="_blank"
+           rel="noopener">
+            <span class="site-github-label">GitHub</span>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-2.91-.88-2.91-2.77 0-.54.19-1.35.61-1.84-.06-.15-.27-.77.06-1.6 0 0 .68-.21 2.23.83a5.4 5.4 0 0 1 1.44-.19c.49 0 .98.07 1.44.19 1.55-1.05 2.23-.83 2.23-.83.33.83.12 1.45.06 1.6.42.49.61 1.3.61 1.84 0 1.9-1.14 2.57-2.92 2.77.3.26.56.76.56 1.54 0 1.1-.01 1.99-.01 2.26 0 .21.15.46.55.38A7.99 7.99 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        </a>
+    </div>
+</header>
+
+<main id="top">
+<section class="hero">
+    <div class="wrap hero-grid" id="heroRoot" data-reveal="pending">
+      <div class="hero-copy">
+        <p class="kicker">Continuous corners for the web</p>
+        <h1 class="hero-headline">
+            The <span class="h1-frame">
+                    <span class="h1-frame-box" data-corner-js>corners</span>
+            </span><br>CSS cannot draw
+        </h1>
+        <p class="hero-lede">
+            A <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">squircle</span></a>
+            is neither a rounded rectangle nor a circle &mdash; a few pixels of silhouette that
+            change how the whole shape reads. It is not new:
+            <a href="#hein-1959">Piet Hein</a> named it in 1959 and built a Stockholm square out of
+            it, and the curve behind it is <a href="#lame-1818">two centuries old</a>. Screens got it
+            late &mdash; <a href="#nokia-2011">Nokia</a> in 2011, then iOS 7 made it everyone's.
+            Apple's own corner is not even a squircle: an arc with Bézier
+            shoulders that no
+            <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a>
+            exponent reaches, which is what
+            <a href="https://www.figma.com/blog/desperately-seeking-squircles/" target="_blank" rel="noopener"><span class="link-text">Figma's
+            construction</span></a> reproduces. corner.js draws both as a <code>clip-path</code>,
+            shadow and border on the same path.
+        </p>
+        <!-- Three, and the wrapping settled itself. Two came out because the page says them better
+             elsewhere: the smoothing value is on the slider below (where it is live, rather than
+             claiming a fixed 0.6 the slider can contradict), and what is read out of your CSS is
+             the third feature one screen down. -->
+        <div class="hero-meta">
+            <span class="pill" id="metaTier">&ndash;</span>
+            <span class="pill">One vanilla JS file</span>
+            <span class="pill">No dependencies</span>
+        </div>
+      </div>
+
+      <!-- The comparison is a HAIRLINE over the fill, not a second solid. Two filled
+           layers at the same radius mostly hide each other -- the difference is a sliver a
+           couple of pixels wide -- while a 1px outline of the plain arc laid over the
+           continuous fill shows exactly where the two curves cross: the arc runs outside
+           near the middle of each edge and inside near the apex.
+           Two independent switches, because they answer different questions: is the
+           smoothing on, and do I want the other curve drawn over it. -->
+      <div class="hero-demo" id="heroDemo" data-comparison="on">
+          <div class="hero-demo-stage" data-corner-js>
+              <span class="hero-demo-zoom">
+                  <button type="button" id="zoomOut" aria-label="Zoom out">&minus;</button>
+                  <output id="heroZoom">3&times;</output>
+                  <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+              </span>
+              <span class="hero-demo-stack">
+                  <span class="hero-demo-shape" data-corner-js></span>
+                  <span class="hero-demo-arc" aria-hidden="true"></span>
+              </span>
+          </div>
+          <div class="hero-demo-foot">
+              <p class="hero-demo-caption">
+                  <span class="hero-demo-legend">
+                      <span><i class="drawn"></i> <strong id="heroDemoState">Continuous, 60%</strong></span>
+                      <span><i class="arc"></i> Plain arc, same radius</span>
+                  </span>
+                  <span id="heroDemoHint">Red shows where the arc reaches past the continuous curve</span>
+              </p>
+          </div>
+
+          <!-- Two sliders and one switch. The sliders drive the headline's frame and this preview
+               from the same two values, and the arc is always underneath both. -->
+          <div class="hero-controls">
+              <label class="hero-slider">
+                  <span>Corner radius (<output id="heroRadiusOut">33px</output>)</span>
+                  <input id="heroRadius" type="range" min="0" max="72" step="1" value="33">
+              </label>
+              <label class="hero-slider">
+                  <span>Corner smoothing (<output id="heroSmoothOut">0.6</output>)</span>
+                  <input id="heroSmooth" type="range" min="0" max="100" step="5" value="60">
+              </label>
+              <label class="toggle">
+                  <input id="toggleComparison" type="checkbox" checked> Comparison
+              </label>
+          </div>
+      </div>
+    </div>
+</section>
+
+<section id="features" style="background: var(--bg-section)">
+    <div class="wrap">
+        <div class="section-head">
+            <p class="kicker">Features</p>
+            <h2>What you get</h2>
+            <p>
+                Five things it does, each one checkable further down.
+            </p>
+        </div>
+
+        <ul class="features">
+            <li><strong>One attribute.</strong> <code>data-corner-js</code> on the element,
+                and nothing else &mdash; no component, no import, no call.</li>
+            <li><strong>The shadow and the border follow the curve.</strong> A
+                <code>clip-path</code> removes both from the element it clips, so both are rebuilt
+                along the exact path that was drawn.</li>
+            <li><strong>The shape comes out of your CSS.</strong> <code>border-radius</code>,
+                <code>--corner-smoothing</code> and <code>box-shadow</code> are read where they
+                already are. Nothing is declared twice.</li>
+            <li><strong>It works inside your framework.</strong> React, Vue, Solid and Turbo are
+                mounted and measured further down this page &mdash; in this browser, on every load.
+                Svelte and Angular the same way, and there is nothing to add for any of them.</li>
+            <li><strong><a href="https://developer.mozilla.org/en-US/docs/Glossary/Progressive_Enhancement" target="_blank" rel="noopener"><span class="link-text">Progressive
+                enhancement</span></a>, literally.</strong> The corner is the enhancement: with no
+                JavaScript what shows is the <code>border-radius</code> you declared &mdash; and the
+                <code>corner-shape</code>, in a browser that has it. No empty box, no layout shift.</li>
+        </ul>
+    </div>
+</section>
+
+<section id="playground">
+    <div class="wrap">
+        <div class="section-head">
+            <p class="kicker">Playground</p>
+            <h2>Playground</h2>
+            <p>
+                The controls write the CSS below and call <code>refresh</code>. The snippet is what
+                ran &mdash; and the size appears in it twice on purpose: where corner.js draws, it
+                wraps the element and writes <code>width/height: 100%</code> onto it, so the real
+                size has to sit on the wrapper. Where the browser draws, there is no wrapper and
+                only the rule on the element applies.
+            </p>
+        </div>
+
+        <div class="playground">
+            <div class="panel">
+                <label class="control">
+                    <span class="control-row control-row-lead">Select curve type</span>
+                    <select id="curve">
+                        <option value="continuous" selected>Continuous curvature</option>
+                        <option value="superellipse">Superellipse &mdash; pick the exponent</option>
+                        <option value="arc">Arc (border-radius)</option>
+                    </select>
+                </label>
+                <p class="control-note" id="continuityNote"></p>
+
+
+                <p class="panel-group">Size</p>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Size</span><output id="sizeOut">240px</output></span>
+                    <input id="size" type="range" min="80" max="480" step="4" value="240">
+                    <span class="control-note">One axis, so the object stays 1:1.</span>
+                </label>
+
+                <p class="panel-group">Corner</p>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Radius</span><output id="radiusOut">33px</output></span>
+                    <input id="radius" type="range" min="0" max="200" step="1" value="33">
+                </label>
+                <label class="control toggle">
+                    <input id="link" type="checkbox" checked> Same on all four
+                </label>
+                <div id="perCorner" hidden>
+                    <label class="control">
+                        <span class="control-row"><span class="control-label">Top left</span><output id="tlOut">33px</output></span>
+                        <input id="tl" type="range" min="0" max="200" step="1" value="33">
+                    </label>
+                    <label class="control">
+                        <span class="control-row"><span class="control-label">Top right</span><output id="trOut">33px</output></span>
+                        <input id="tr" type="range" min="0" max="200" step="1" value="33">
+                    </label>
+                    <label class="control">
+                        <span class="control-row"><span class="control-label">Bottom right</span><output id="brOut">33px</output></span>
+                        <input id="br" type="range" min="0" max="200" step="1" value="33">
+                    </label>
+                    <label class="control">
+                        <span class="control-row"><span class="control-label">Bottom left</span><output id="blOut">33px</output></span>
+                        <input id="bl" type="range" min="0" max="200" step="1" value="33">
+                    </label>
+                    <span class="control-note">Read separately, so a soft corner can meet a sharp one.</span>
+                </div>
+                <label class="control" id="smoothWrap">
+                    <span class="control-row"><span class="control-label">Smoothing</span><output id="smoothOut">60%</output></span>
+                    <input id="smooth" type="range" min="0" max="100" step="5" value="60">
+                    <span class="control-note">
+                        <strong>60%</strong> is Apple&#39;s value. <code>0%</code> is a plain arc,
+                        <code>100%</code> has no arc left.
+                    </span>
+                </label>
+                <label class="control" id="exponentWrap" hidden>
+                    <span class="control-row"><span class="control-label">Exponent</span><output id="exponentOut">4</output></span>
+                    <input id="exponent" type="range" min="2" max="12" step="0.5" value="4">
+                    <span class="control-note" id="exponentNote"></span>
+                </label>
+                <p class="control-note" id="smoothAbsent" hidden>
+                    An arc has no parameter: <code>border-radius</code> is the whole shape.
+                </p>
+
+                <p class="panel-group">Drop shadow</p>
+                <label class="control toggle">
+                    <input id="shadowOn" type="checkbox"> Drop shadow
+                </label>
+                <div id="shadowControls" hidden>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Offset X</span><output id="offsetXOut">0px</output></span>
+                    <input id="offsetX" type="range" min="-40" max="40" step="1" value="0">
+                </label>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Offset Y</span><output id="offsetOut">15px</output></span>
+                    <input id="offset" type="range" min="-40" max="60" step="1" value="15">
+                </label>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Blur</span><output id="blurOut">30px</output></span>
+                    <input id="blur" type="range" min="0" max="80" step="1" value="30">
+                </label>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Spread</span><output id="spreadOut">0px</output></span>
+                    <input id="spread" type="range" min="-20" max="40" step="1" value="0">
+                    <span class="control-note">
+                        Becomes an <code>feMorphology</code> dilate or erode before the blur.
+                    </span>
+                </label>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Opacity</span><output id="alphaOut">14%</output></span>
+                    <input id="alpha" type="range" min="0" max="60" step="1" value="14">
+                    <span class="control-note">
+                        <code>0%</code> removes the SVG too. Blur maps to
+                        <code>stdDeviation = blur / 2</code>.
+                    </span>
+                </label>
+                </div>
+
+                <p class="panel-group">Border</p>
+                <label class="control">
+                    <span class="control-row"><span class="control-label">Width</span><output id="borderOut">0px</output></span>
+                    <input id="borderWidth" type="range" min="0" max="12" step="1" value="0">
+                    <span class="control-note">Stroked along the same path. <code>0</code> is off.</span>
+                </label>
+
+                <p class="panel-group">Colour</p>
+                <label class="control toggle" id="compareWrap">
+                    <input id="compare" type="checkbox"> Compare against the plain arc
+                </label>
+                <p class="control-note" id="compareNote" hidden>
+                    The two fills are the comparison, so the colours below are fixed while it is on:
+                    blue is the curve corner.js drew, red the arc <code>border-radius</code> would
+                    have. Red shows wherever the arc reaches past it.
+                </p>
+                <label class="control toggle">
+                    <input id="transparent" type="checkbox" checked> Transparent background
+                </label>
+                <label class="control swatch">
+                    <span>Background</span>
+                    <input id="bgColor" type="color" value="#ececec">
+                </label>
+                <label class="control swatch">
+                    <span>Object</span>
+                    <input id="objColor" type="color" value="#ffffff">
+                </label>
+
+                <p class="panel-group">Derived</p>
+                <dl class="derived" id="derived">
+                    <dt>Budget</dt><dd id="dBudget">&ndash;</dd>
+                    <dt>Radius used</dt><dd id="dRadius">&ndash;</dd>
+                    <dt>Reach <code>p</code></dt><dd id="dReach">&ndash;</dd>
+                    <dt>Arc</dt><dd id="dArc">&ndash;</dd>
+                    <dt>Smoothing used</dt><dd id="dSmooth">&ndash;</dd>
+                </dl>
+                <p class="control-note" id="budgetNote"></p>
+            </div>
+
+            <div class="preview-column">
+                <!-- A HOLDER around the artboard carries the sticky, not the column: the column is
+                     taller than the viewport now that the code panels do not scroll inside
+                     themselves, and a sticky box taller than the viewport leaves the screen before
+                     its bottom arrives -- which is why the artboard scrolled away while there were
+                     still controls to reach. Not on the stage itself either: that is a corner.js
+                     target, and sticky on a target sticks inside the wrapper the module inserts. -->
+                <div class="stage-holder">
+                <div class="stage" id="stage" data-continuity="on" data-corner-js>
+                    <span class="preview-stack">
+                        <div class="preview" data-corner-js id="preview">
+                            <span id="previewLabel">240 &times; 240</span>
+                        </div>
+                        <span class="preview-arc" id="previewArc" aria-hidden="true"></span>
+                    </span>
+                </div>
+                </div>
+
+                <div class="code" data-corner-js>
+                    <div class="code-head">
+                        <span>Generated &mdash; CSS</span>
+                    </div>
+                    <pre><code id="generatedCss"></code></pre>
+                    <div class="code-head code-head-split">
+                        <span id="codeHeadTwo">Generated &mdash; markup</span>
+                        <button class="ghost" id="copy" type="button">Copy both</button>
+                    </div>
+                    <pre><code id="generated"></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="components" style="background: var(--bg-section)">
+    <div class="wrap">
+        <!-- NOT inside .section-head: a sticky element only sticks within its own containing
+             block, and .section-head ends where the demos begin -- so the toggle came unstuck at
+             the first card, with several screens of demos still to come. As a sibling of the grid
+             its containing block is the whole section. -->
+        <p class="kicker">In practice</p>
+        <div class="section-head-row">
+            <h2>Component examples</h2>
+            <label class="toggle">
+                <input id="toggleComponents" type="checkbox" checked> corner.js
+            </label>
+        </div>
+        <p class="section-lede">
+            See squircles applied to real UI components. <code>border-radius</code> in the
+            stylesheet, <code>data-corner-js</code> in the markup, all live &mdash; switch
+            it off and the same markup falls back to plain <code>border-radius</code>.
+        </p>
+
+        <!-- Photographs sit at 2, 6 and 8. Three photographs among eight tiles cannot avoid touching
+             at every column count -- that needs pairwise gaps of four, so nine slots -- so this is
+             tuned for the three-column layout, where none of them share an edge. At two columns the
+             last two land one above the other. -->
+        <div class="demo-grid">
+            <div class="demo">
+                <span class="demo-label">Buttons</span>
+                <div class="demo-body">
+                    <button class="d-button" data-corner-js type="button">Continue</button>
+                    <button class="d-button secondary" data-corner-js type="button">Cancel</button>
+                </div>
+            </div>
+
+            <div class="demo">
+                <span class="demo-label">Photograph</span>
+                <div class="demo-body">
+                    <div class="d-media" data-corner-shadow-wrap>
+                        <img class="d-photo" data-corner-js width="480" height="320"
+                             loading="lazy" decoding="async"
+                             src="https://images.unsplash.com/photo-1538898780761-268f71f67675?auto=format&fit=crop&w=960&h=640&q=80"
+                             alt="A monstera leaf in grayscale, clipped along the continuous curve">
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo">
+                <span class="demo-label">Card with shadow</span>
+                <div class="demo-body">
+                    <div class="d-card" data-corner-js>
+                        <h3>Name Intelligence</h3>
+                        <p>Structure, role and confidence for a single name string.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo">
+                <span class="demo-label">Input with border and focus ring</span>
+                <div class="demo-body">
+                    <!-- The wrapper is written out here instead of being left to corner.js, so the
+                         ring can be a SIBLING of the input. The ring carries data-corner-js as well
+                         and is drawn along the same curve -- an outline or a box-shadow cannot be,
+                         which is why both earlier attempts missed the corner. -->
+                    <div class="d-field" data-corner-shadow-wrap>
+                        <input class="d-input" data-corner-js type="text"
+                               placeholder="Clipped and stroked" aria-label="Example input">
+                        <span class="focus-ring" data-corner-js aria-hidden="true"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo">
+                <span class="demo-label">Avatar and badges</span>
+                <div class="demo-body">
+                    <div class="d-avatar" data-corner-js>LB</div>
+                    <span class="d-badge" data-corner-js>v2.1</span>
+                    <span class="d-badge" data-corner-js>offline</span>
+                </div>
+            </div>
+
+            <div class="demo">
+                <span class="demo-label">Wider corner</span>
+                <div class="demo-body">
+                    <div class="d-media" data-corner-shadow-wrap>
+                        <img class="d-photo d-photo-round" data-corner-js width="480" height="320"
+                             loading="lazy" decoding="async"
+                             src="https://images.unsplash.com/photo-1557110437-0bcd0a636d62?auto=format&fit=crop&w=960&h=640&q=80"
+                             alt="A white sphere, the same treatment at a larger radius">
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo">
+                <span class="demo-label">Dialog</span>
+                <div class="demo-body">
+                    <div class="d-dialog" data-corner-js>
+                        <h3>Discard changes?</h3>
+                        <p style="margin-top: 6px; font-size: var(--text-size-detail); color: var(--fg-muted)">
+                            This cannot be undone.
+                        </p>
+                        <div class="d-dialog-actions">
+                            <button class="d-button" data-corner-js type="button">Discard</button>
+                            <button class="d-button secondary" data-corner-js type="button">Keep</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo">
+                <span class="demo-label">Squircle, with a shadow</span>
+                <div class="demo-body">
+                    <div class="d-media" data-corner-shadow-wrap>
+                        <img class="d-photo d-photo-shadow" data-corner-js="superellipse-4" width="480" height="320"
+                             loading="lazy" decoding="async"
+                             src="https://images.unsplash.com/photo-1586078875290-c22eb791ad5d?auto=format&fit=crop&w=960&h=640&q=80"
+                             alt="A round black and white speaker, clipped as a superellipse, its shadow on the same curve">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<section id="use">
+    <!-- Same two-column pattern as the history: the heading holds while the examples scroll, so a
+         reader four snippets down still sees what they are examples of. -->
+    <div class="wrap history-grid">
+        <div class="section-head history-head">
+            <p class="kicker">Using it</p>
+            <h2>Integration</h2>
+            <p>
+                The shape is declared in markup, so whatever renders the markup is enough &mdash;
+                your framework included. On a plain page that is the entire integration.
+            </p>
+        </div>
+
+        <div class="use-column">
+        <div class="code">
+            <div class="code-head"><span>Plain HTML &mdash; and Turbo, htmx, Astro, any server render</span></div>
+            <pre><code>&lt;script async src="corner.min.js"&gt;&lt;/script&gt;
+
+&lt;div class="card" data-corner-js&gt;…&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="prose" style="margin-top: var(--spacing-6)">
+            <p>
+                A mount, a hydration and a swapped fragment are the same event to a
+                <code>MutationObserver</code>, so nothing needs hooking. Inside
+                <a href="https://react.dev" target="_blank" rel="noopener"><span class="link-text">React</span></a>,
+                <a href="https://vuejs.org" target="_blank" rel="noopener"><span class="link-text">Vue</span></a>,
+                <a href="https://svelte.dev" target="_blank" rel="noopener"><span class="link-text">Svelte</span></a> or
+                <a href="https://angular.dev" target="_blank" rel="noopener"><span class="link-text">Angular</span></a>,
+                <a href="https://solidjs.com" target="_blank" rel="noopener"><span class="link-text">Solid</span></a>
+                or <a href="https://turbo.hotwired.dev" target="_blank" rel="noopener"><span class="link-text">Turbo</span></a>
+                there is one thing to do, and it is not about drawing: <strong>render the wrapper
+                yourself</strong>. Four of those six are mounted and measured at the end of this
+                section, in this browser, every time the page loads.
+            </p>
+            <p>
+                corner.js moves every drawn element into a wrapper <code>&lt;div&gt;</code>, because
+                the shadow and the border are redrawn as siblings and need an ancestor that is not
+                clipped. The reconciler, meanwhile, still holds the parent it rendered into &mdash;
+                measured in Chrome, <code>removeChild</code> and <code>insertBefore</code> then both
+                throw <code>NotFoundError</code>. An element already inside
+                <code>[data-corner-shadow-wrap]</code> is left where it is, so the tree the
+                framework owns stays untouched.
+            </p>
+        </div>
+
+        <!-- One panel at a time: six snippets stacked would bury the prose under them, and only
+             one framework is ever the reader's. -->
+        <div class="code-tabs" id="codeTabs">
+            <div class="code-tablist" role="tablist" aria-label="Integration examples">
+                <button class="code-tab" id="tabbtn-react" type="button" role="tab" aria-controls="tab-react" aria-selected="true">React</button>
+                <button class="code-tab" id="tabbtn-vue" type="button" role="tab" aria-controls="tab-vue" aria-selected="false">Vue</button>
+                <button class="code-tab" id="tabbtn-svelte" type="button" role="tab" aria-controls="tab-svelte" aria-selected="false">Svelte</button>
+                <button class="code-tab" id="tabbtn-angular" type="button" role="tab" aria-controls="tab-angular" aria-selected="false">Angular</button>
+                <button class="code-tab" id="tabbtn-solid" type="button" role="tab" aria-controls="tab-solid" aria-selected="false">Solid</button>
+                <button class="code-tab" id="tabbtn-turbo" type="button" role="tab" aria-controls="tab-turbo" aria-selected="false">Turbo</button>
+            </div>
+            <div class="code code-tabpanel" id="tab-react" role="tabpanel"
+                 aria-labelledby="tabbtn-react">
+                <div class="code-head"><span>React</span></div>
+                <pre><code>import cornerjs from 'corner.js'
+import { useEffect, useRef } from 'react'
+
+export function Card ({ children })
+{
+    const ref = useRef(null)
+
+    // The observer would draw it a microtask later;
+    // apply draws it now.
+    useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])
+
+    return (
+        &lt;div ref={ref} data-corner-shadow-wrap
+             style={{ position: 'relative' }}&gt;
+            &lt;div className="card" data-corner-js&gt;
+                {children}
+            &lt;/div&gt;
+        &lt;/div&gt;
+    )
+}</code></pre>
+            </div>
+            <div class="code code-tabpanel" id="tab-vue" role="tabpanel"
+                 aria-labelledby="tabbtn-vue" hidden>
+                <div class="code-head"><span>Vue</span></div>
+                <pre><code>&lt;script setup&gt;
+import cornerjs from 'corner.js'
+import { onMounted, ref } from 'vue'
+
+const root = ref(null)
+
+onMounted(() =&gt; cornerjs.apply(root.value))
+&lt;/script&gt;
+
+&lt;template&gt;
+    &lt;div ref="root" data-corner-shadow-wrap
+         style="position: relative"&gt;
+        &lt;div class="card" data-corner-js&gt;
+            &lt;slot /&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/template&gt;</code></pre>
+            </div>
+            <div class="code code-tabpanel" id="tab-svelte" role="tabpanel"
+                 aria-labelledby="tabbtn-svelte" hidden>
+                <div class="code-head"><span>Svelte</span></div>
+                <pre><code>&lt;script&gt;
+    import cornerjs from 'corner.js'
+    import { onMount } from 'svelte'
+
+    let root
+
+    onMount(() =&gt; cornerjs.apply(root))
+&lt;/script&gt;
+
+&lt;div bind:this={root} data-corner-shadow-wrap
+     style="position: relative"&gt;
+    &lt;div class="card" data-corner-js&gt;
+        &lt;slot /&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+            </div>
+            <div class="code code-tabpanel" id="tab-angular" role="tabpanel"
+                 aria-labelledby="tabbtn-angular" hidden>
+                <div class="code-head"><span>Angular</span></div>
+                <pre><code>import cornerjs from 'corner.js'
+import { AfterViewInit, Component, ElementRef,
+         inject } from '@angular/core'
+
+@Component({
+    selector: 'app-card',
+    template: `
+        &lt;div data-corner-shadow-wrap
+             style="position: relative"&gt;
+            &lt;div class="card" data-corner-js&gt;
+                &lt;ng-content /&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;`
+})
+export class CardComponent implements AfterViewInit
+{
+    private host = inject(ElementRef)
+
+    ngAfterViewInit ()
+    {
+        cornerjs.apply(this.host.nativeElement)
+    }
+}</code></pre>
+            </div>
+            <div class="code code-tabpanel" id="tab-solid" role="tabpanel"
+                 aria-labelledby="tabbtn-solid" hidden>
+                <div class="code-head"><span>Solid</span></div>
+                <pre><code>import cornerjs from 'corner.js'
+import { onMount } from 'solid-js'
+
+export function Card (props)
+{
+    let root
+
+    onMount(() =&gt; cornerjs.apply(root))
+
+    return (
+        &lt;div ref={root} data-corner-shadow-wrap
+             style={{ position: 'relative' }}&gt;
+            &lt;div class="card" data-corner-js&gt;
+                {props.children}
+            &lt;/div&gt;
+        &lt;/div&gt;
+    )
+}</code></pre>
+            </div>
+            <div class="code code-tabpanel" id="tab-turbo" role="tabpanel"
+                 aria-labelledby="tabbtn-turbo" hidden>
+                <div class="code-head"><span>Turbo</span></div>
+                <pre><code>&lt;!-- Nothing to import and nothing to hook: the module
+     is already on the page from your layout. The
+     fragment carries the wrapper, and the observer
+     picks the new node up on its own. --&gt;
+&lt;turbo-frame id="card"&gt;
+    &lt;div data-corner-shadow-wrap style="position: relative"&gt;
+        &lt;div class="card" data-corner-js&gt;…&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/turbo-frame&gt;
+
+&lt;!-- A stream replaces it the same way --&gt;
+&lt;turbo-stream action="replace" target="card"&gt;
+    &lt;template&gt;…&lt;/template&gt;
+&lt;/turbo-stream&gt;</code></pre>
+            </div>
+        </div>
+
+        <div class="prose" style="margin-top: var(--spacing-6)">
+            <p>
+                One detail every one of those shares: the wrapper has to be
+                <strong>positioned</strong>, because the shadow SVG anchors to the nearest
+                positioned ancestor. The element inside keeps whatever size its own CSS gives it
+                &mdash; corner.js does not resize it, and it only puts an element in a wrapper at
+                all when a shadow or a border has to be redrawn.
+            </p>
+            <p>
+                With a bundler, import instead of reaching for the global:
+                <code>import { apply, refresh } from 'corner.js'</code>. The built file is for a
+                <code>&lt;script&gt;</code> tag and sets <code>window.cornerjs</code>; the module
+                source is what npm resolves.
+            </p>
+            <p>
+                <code>apply(root)</code> is not required for the corner to appear &mdash; the
+                observer draws it either way, a microtask later. It matters when the component
+                measures itself on mount, since it draws <em>synchronously</em>. It returns how many
+                elements it started, and a root counts as a target only if it carries the attribute
+                itself.
+            </p>
+            <p>
+                <code>refresh(root)</code> is for a <strong>style</strong> change, which no
+                <code>ResizeObserver</code> reports: a radius or smoothing edit alters the shape,
+                not the box. Pass <code>{ reread: true }</code> when <code>box-shadow</code> or
+                <code>border</code> changed as well. Size changes need neither, and neither does
+                changing <code>data-corner-js</code>: the observer sees the new value and redraws the
+                element in the new curve.
+            </p>
+        </div>
+
+
+        <!-- LIVE framework checks, not screenshots of them. Each one mounts a component, has
+             corner.js draw it, reports what was measured, then unmounts -- and the unmount is the
+             point: that is where a reconciler trips over a wrapper the module inserted between the
+             element and the parent it rendered into. If a row here ever reads "failed", the claim
+             above stopped being true, on this page, in this browser.
+             Angular is the one absent: it needs its own compiler and zone setup, which a static
+             page cannot host. Svelte compiles ahead of time too, but bin/build.js compiles its
+             fixture -- so the row below mounts the same output a Svelte user ships. -->
+        <div class="framework-checks">
+            <div class="framework-head">
+                <h3>Live framework checks</h3>
+                <p id="frameworkNote">Loading from a CDN&hellip;</p>
+                <p class="framework-missing">Angular is not in the list: it needs its own compiler and
+                zone setup, which a static page cannot host. Its example above is shown, not run.</p>
+            </div>
+            <div class="framework-mounts" id="frameworkMounts"></div>
+            <div class="table-scroll">
+                <table class="framework-table">
+                    <thead>
+                        <tr>
+                            <th><span class="visually-hidden">Framework</span></th><th>Version</th><th>Drawn</th>
+                            <th>Wrapper reused</th><th>Resize</th><th>Unmount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="frameworkRows"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="code" style="margin-top: var(--spacing-6)">
+            <div class="code-head"><span>The two calls, outside a framework</span></div>
+            <pre><code>import cornerjs from 'corner.js'
+// or: import { apply, refresh } from 'corner.js'
+// or, from a &lt;script&gt; tag: nothing -- window.cornerjs
+
+// Measuring in the same tick as the insertion
+container.append(card)
+cornerjs.apply(container)      // returns the count started
+card.getBoundingClientRect()   // already clipped
+
+// After a style-only change
+cornerjs.refresh(el, { reread: true })</code></pre>
+        </div>
+        </div>
+    </div>
+</section>
+
+<section id="limits">
+    <div class="wrap history-grid">
+        <div class="section-head history-head">
+            <p class="kicker">What it costs</p>
+            <h2>Limitations</h2>
+            <p>
+                Most of these are what <code>clip-path</code> does, not choices &mdash; anything
+                that clips inherits them.
+            </p>
+        </div>
+
+        <div class="use-column">
+
+        <div class="prose">
+            <ul>
+                <li>
+                    <strong>Everything inside the element is clipped</strong> &mdash; children,
+                    overflow, pseudo-elements, a scrollbar. A tooltip or dropdown that leaves the
+                    box is cut at the curve. It is the same clip that draws the shape.
+                </li>
+                <li>
+                    <strong>Focus rings are cut with it.</strong> Put the focus style on a parent
+                    rather than on the clipped element.
+                </li>
+                <li>
+                    <strong>The inserted wrapper becomes the flex or grid item.</strong> Percentage
+                    sizes, fixed dimensions and <code>parent&nbsp;&gt;&nbsp;child</code> selectors
+                    stop behaving; real dimensions have to go on the wrapper.
+                </li>
+                <li>
+                    <strong>Only the top border is read.</strong> Width, colour and style come from
+                    <code>border-top-*</code>: one continuous curve has no sides to give four
+                    different strokes to.
+                </li>
+                <li>
+                    <strong>One form of <code>border-radius</code> is not understood.</strong>
+                    Everything the cascade resolves to a length arrives correctly &mdash; four
+                    different corners, <code>em</code>, <code>var()</code>, <code>inherit</code>,
+                    <code>calc()</code> of lengths. A percentage is elliptical by definition and is
+                    resolved against the width, like a declared elliptical radius. But a
+                    <code>calc()</code> that <em>mixes</em> a percentage with a length stays
+                    unresolved in the computed value and reads as <code>0</code> &mdash; a square
+                    corner, drawn without complaint.
+                </li>
+                <li>
+                    <strong>Only solid borders.</strong> One stroke along the path &mdash; no
+                    dashed, dotted or double, and no <code>border-image</code>.
+                </li>
+                <li>
+                    <strong><code>outline</code> is left alone</strong>, which means it is clipped
+                    rather than redrawn along the curve.
+                </li>
+                <li>
+                    <strong>The shadow and border are read once.</strong> They have to be cached:
+                    by the second run <code>getComputedStyle</code> would read back corner.js's own
+                    overrides. A later stylesheet change needs
+                    <code>refresh(root, { reread: true })</code>.
+                </li>
+                <li>
+                    <strong><code>!important</code> beats the strip.</strong> The element's own
+                    <code>box-shadow</code> is cleared with an inline style, so a rule marked
+                    important outranks it and both shadows paint.
+                </li>
+                <li>
+                    <strong>No transitions on shadow or border.</strong> Both are replaced by SVG,
+                    so a CSS transition on them has nothing to animate. The clip is not animatable
+                    either.
+                </li>
+                <li>
+                    <strong>A document-wide <code>MutationObserver</code> stays running</strong>, so
+                    corner.js gets a callback on every DOM mutation on the page. It bails out early
+                    for non-elements and subtrees with no targets, but it is not free. The trade is
+                    that nothing has to boot it.
+                </li>
+            </ul>
+        </div>
+        </div>
+    </div>
+</section>
+
+<section id="support">
+    <div class="wrap history-grid">
+        <div class="section-head history-head">
+            <p class="kicker">What it needs</p>
+            <h2>Browser support</h2>
+            <p>
+                One row per feature, with the version it landed in and a live test of the browser
+                you are reading this in. Two are marked <strong>required</strong>: without either,
+                no corner is drawn and your <code>border-radius</code> stands. The rest each lose
+                one thing, named in the row.
+            </p>
+        </div>
+
+        <div class="use-column">
+
+        <div class="table-scroll">
+            <table class="support-table" id="supportTable">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Browsers</th>
+                        <th>This browser</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <p class="support-minimum">
+            <strong>corner.js needs:</strong> <span id="supportMinimum">&ndash;</span>. The other
+            rows are this page's own work.
+        </p>
+
+        <p class="section-footnote">
+            Version numbers come from
+            <a href="https://caniuse.com" target="_blank" rel="noopener"><span class="link-text">caniuse</span></a>
+            and
+            <a href="https://github.com/mdn/browser-compat-data" target="_blank" rel="noopener"><span class="link-text">MDN</span></a>,
+            so they can fall behind. The Yes and No are tested here, on load. Three engines is the
+            whole list: Edge, Opera, Brave and Vivaldi are Blink like Chrome, and every browser on
+            iOS is WebKit like Safari.
+        </p>
+        </div>
+    </div>
+</section>
+
+<section id="tiers">
+    <div class="wrap history-grid">
+        <div class="section-head history-head">
+            <p class="kicker">How it is drawn</p>
+            <h2>What draws which curve</h2>
+            <p>
+                Not a hierarchy to descend. For the continuous curve there is exactly one technique
+                and no alternative; a real fallback relationship exists only for the two
+                superellipse modes. The column that applies to you is marked.
+            </p>
+        </div>
+
+        <div class="use-column">
+
+        <div class="table-scroll">
+            <table id="drawTable">
+                <thead>
+                    <tr>
+                        <th>You ask for</th>
+                        <th data-col="native">With <code>corner-shape</code></th>
+                        <th data-col="clip">Without it</th>
+                        <th>JavaScript off</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>continuous</code></td>
+                        <td><strong>clip-path</strong> &mdash; no CSS value expresses this curve</td>
+                        <td><strong>clip-path</strong></td>
+                        <td><code>border-radius</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>squircle</code></td>
+                        <td><strong>native</strong>, GPU, no JavaScript</td>
+                        <td><strong>clip-path</strong></td>
+                        <td><code>border-radius</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>superellipse-5</code></td>
+                        <td><strong>native</strong>, as <code>superellipse(log&#8322;5)</code></td>
+                        <td><strong>clip-path</strong></td>
+                        <td><code>border-radius</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="prose" style="margin-top: var(--spacing-6)">
+            <p>
+                <strong id="drawVerdict">&ndash;</strong>
+            </p>
+            <p>
+                No exponent of the superellipse reaches the continuous curve, and that is measured
+                rather than assumed: Figma checked the fit against the real icon and found
+                <em>&ldquo;a small but systematic discrepancy&rdquo;</em> at every exponent
+                (<a href="https://www.figma.com/blog/desperately-seeking-squircles/" target="_blank" rel="noopener"><span class="link-text">Desperately seeking squircles</span></a>). Which is why they
+                derived a construction with a parameter instead of fitting one number.
+            </p>
+            <p>
+                A <strong><a href="https://developer.mozilla.org/en-US/docs/Web/API/CSS_Painting_API"
+                target="_blank" rel="noopener"><span class="link-text">Houdini paint worklet</span></a></strong>
+                could draw either family exactly &mdash; it
+                is a canvas, not a vocabulary. <strong>Not implemented, and not planned</strong>,
+                because its availability is disjoint from where it would help: the API is
+                Chromium-only, and Chromium is also the only engine with <code>corner-shape</code>.
+                It would speed up the one browser in which <code>clip-path</code> already works, and
+                be absent from the two where a faster path would be worth having.
+            </p>
+            <p>
+                Native <code>corner-shape</code> is Chromium-only too, and is used anyway, which
+                looks inconsistent until you price the two. Supporting native is not an
+                implementation but an <em>early return</em>: one <code>CSS.supports</code> check and
+                the module steps aside, so the GPU draws it for free where it exists and the
+                existing path runs where it does not. A worklet would be a second full
+                implementation &mdash; its own file, its own registration, masking instead of
+                clipping with its own shadow and border consequences &mdash; for a browser that
+                already works. One <code>if</code> against a parallel code path.
+            </p>
+            <p>
+                <strong>The chain, in order.</strong> A continuous corner needs
+                <code>clip-path</code> and has no substitute for it: without it the declared
+                <code>border-radius</code> stands, which is the last resort for every row above. A
+                superellipse has one rung more &mdash; native <code>corner-shape</code> where it
+                exists, a <code>clip-path</code> where it does not, <code>border-radius</code> if neither.
+            </p>
+            <p>
+                Where <code>clip-path</code> draws, the shadow and the border are drawn as SVG
+                beside it, because a clip removes the element's own. That is not a tier &mdash; it
+                is the consequence of clipping, and it applies in every browser.
+            </p>
+        </div>
+        </div>
+    </div>
+</section>
+
+<section id="shape" style="background: var(--bg-section)">
+    <div class="wrap history-grid">
+        <div class="section-head history-head">
+            <p class="kicker">The curve itself</p>
+            <h2>The shape</h2>
+            <p>
+                What curvature continuity is, which two families have it, and why Figma needed a
+                construction with a parameter rather than one exponent.
+            </p>
+        </div>
+
+        <div class="use-column">
+
+        <div class="prose">
+            <p>
+                Two curve families provide continuous curvature: the
+                <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a>, whose exponent 4 case is the
+                <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">squircle</span></a>, and an arc with Bézier shoulders, which is
+                what corner.js draws.
+            </p>
+            <p>
+                Two curves can meet three ways: at a point (a sharp corner), sharing a direction
+                (<em>tangent</em> continuous &mdash; what <code>border-radius</code> gives you,
+                with curvature jumping from 0 to 1/r), or sharing curvature too
+                (<em>curvature</em> continuous &mdash; this). Draftsmen write those G0, G1 and G2.
+            </p>
+            <p>
+                Apple's corner is, in
+                <a href="https://www.figma.com/blog/desperately-seeking-squircles/" target="_blank" rel="noopener"><span class="link-text">Figma's own words</span></a>, a patchwork of Bézier curves
+                spliced together &mdash; not a formula, so it cannot be turned down for something
+                long and thin. They derived a construction with a parameter instead, and that
+                parameter is smoothing. The code here follows
+                <a href="https://github.com/phamfoo/figma-squircle" target="_blank" rel="noopener"><span class="link-text">phamfoo/figma-squircle</span></a>'s
+                port of that derivation, verified term by term.
+            </p>
+            <p>
+                Both inputs come from CSS, and <code>--corner-smoothing</code> inherits: set it
+                once on a container. Smoothing controls two things at once:
+            </p>
+            <ul>
+                <li>the corner's <strong>reach</strong> along each edge, <code>p = (1 + smoothing) &times; radius</code>;</li>
+                <li>how much of the 90&deg; stays a <strong>circular arc</strong>, <code>90 &times; (1 &minus; smoothing)</code>.</li>
+            </ul>
+            <p>
+                At radius 32: <code>0.6</code> reaches 51.2px, <code>0</code> reaches 32px with a
+                full arc, <code>1</code> reaches 64px with none.
+            </p>
+            <p>
+                The reach is also what runs out. Two corners on one side want 1.6&times; that
+                side at 60%, so capping the radius alone is too generous by that factor: past it the
+                path ran backwards and notched each long edge. Roundness is spent first and
+                smoothing gives way, so a capsule end stays clean. The <em>Derived</em> panel reads
+                the values back out of the drawn path.
+            </p>
+        </div>
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th>Exponent</th><th>Name</th><th>In CSS</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>2</td><td>Circle &mdash; identical to <code>border-radius</code></td>
+                        <td><code>round</code>, or <code>superellipse(1)</code></td></tr>
+                    <tr><td>4</td><td><a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">Squircle</span></a>
+                        &mdash; Piet Hein's case</td>
+                        <td><code>squircle</code>, or <code>superellipse(2)</code></td></tr>
+                    <tr><td>5</td><td>No established name. The closest single exponent to Apple's
+                        curve, and still off</td>
+                        <td><code>superellipse(2.3219)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="prose" style="margin-top: var(--spacing-5)">
+            <p>
+                <strong>The CSS parameter is not the exponent</strong>, which is the easiest thing
+                here to get wrong: it is its base-2 logarithm. Measured in this browser,
+                <code>superellipse(1)</code> computes to <code>round</code> and
+                <code>superellipse(2)</code> to <code>squircle</code> &mdash; a circle is exponent 2,
+                so the keyword is exponent 4. A squircle is <em>not</em> exponent 5.
+            </p>
+        </div>
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th>Input</th><th>Default</th><th>Meaning</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>border-radius</code></td>
+                        <td>&mdash;</td>
+                        <td>Corner size. Read as the construction's input, not merely as a fallback. Per-corner values are honoured.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--corner-smoothing</code></td>
+                        <td><code>0.6</code></td>
+                        <td>How much of the corner is a Bézier ramp rather than a circular arc. Inherits.</td>
+                    </tr>
+                    <tr>
+                        <td><code>.corner-continuous</code></td>
+                        <td>&mdash;</td>
+                        <td>Selects this construction. Without it the element gets a <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a> (n&thinsp;=&thinsp;4, the <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">squircle</span></a>), or n&thinsp;=&thinsp;5, and defers to native <code>corner-shape</code> where that exists.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</section>
+
+<section id="shadow">
+    <div class="wrap history-grid">
+        <div class="section-head history-head">
+            <p class="kicker">Along the same path</p>
+            <h2>The shadow</h2>
+            <p>
+                <code>clip-path</code> clips away <code>box-shadow</code> on the same element, and
+                <code>filter: drop-shadow</code> with it. The shadow therefore cannot live on the
+                clipped element.
+            </p>
+        </div>
+
+        <div class="use-column">
+
+        <div class="prose">
+            <p>
+                It is drawn as its own SVG along the same path, as a sibling inside a
+                <code>[data-corner-shadow-wrap]</code> wrapper. A rounded rect on the wrapper was
+                tried first; its circular corners visibly miss the continuous curve.
+            </p>
+            <p>Built from the element's own computed <code>box-shadow</code>, per layer:</p>
+        </div>
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th>CSS</th><th>SVG</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>blur <code>b</code></td><td><code>feGaussianBlur stdDeviation="b / 2"</code> &mdash; a CSS blur radius is <em>two</em> standard deviations</td></tr>
+                    <tr><td>spread <code>s</code></td><td><code>feMorphology</code> <code>dilate</code>/<code>erode</code> with radius <code>|s|</code>, before the blur</td></tr>
+                    <tr><td>offset</td><td><code>feOffset</code></td></tr>
+                    <tr><td>colour</td><td><code>feColorMatrix</code> to that layer's actual RGB and alpha</td></tr>
+                    <tr><td>layer order</td><td>merged in <strong>reverse</strong> &mdash; <code>box-shadow</code> paints the first layer on top, <code>feMerge</code> the last node</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="prose" style="margin-top: var(--spacing-6)">
+            <p>
+                Its size comes from the shadow's reach
+                (<code>1.5 &times; blur + offset + spread</code>), not a fixed margin.
+            </p>
+            <p><strong>Three consequences:</strong></p>
+            <ul>
+                <li>
+                    <strong>Transform the wrapper, not the target.</strong> A transform on the
+                    target leaves the SVG behind.
+                </li>
+                <li>
+                    <strong>The target is no longer a direct child.</strong> A
+                    <code>parent &gt; target</code> selector stops matching after boot.
+                </li>
+                <li>
+                    <strong>A percentage size resolves against the wrapper</strong>, which is auto.
+                    Put real dimensions on the wrapper.
+                </li>
+            </ul>
+            <p>
+                Measurement uses the <strong>layout</strong> box, never
+                <code>getBoundingClientRect()</code>: the rect includes ancestor transforms and
+                everything drawn lives inside that same subtree, so the scale would apply twice. A
+                500px box at <code>scale(0.97)</code> got a 485px shadow.
+            </p>
+        </div>
+        </div>
+    </div>
+</section>
+
+<section id="history">
+    <!-- Two columns, and the heading stays put: the timeline is long, and a reader deep in 1959
+         should still be able to see what the list is answering. -->
+    <div class="wrap history-grid">
+        <div class="section-head history-head">
+            <p class="kicker">History</p>
+            <h2>Neither circle nor rectangle</h2>
+            <p>
+                Not Apple, not Figma, not corner.js. The shape is two centuries old,
+                the word is sixty, and the reason anyone cares about curvature continuity comes from
+                car bodies rather than from screens.
+            </p>
+        </div>
+
+        <div class="prose">
+            <ul>
+                <li id="lame-1818">
+                    <strong>1818 &mdash; Gabriel Lamé.</strong> The curve itself: raise the exponent
+                    in a circle's or ellipse's equation above 2 and it swells towards a square. Every
+                    <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a> here is a
+                    Lamé curve, and the exponent-4 case centred on the origin is
+                    <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">Lamé's special quartic</span></a>. The
+                    family is worth seeing whole: at exponent 1 it is a diamond, at 2 the circle or
+                    ellipse, and as the exponent grows it approaches a rectangle &mdash; one equation
+                    and one parameter from sharp to round.
+                </li>
+                <li>
+                    <strong>Mid-century &mdash; car surfacing.</strong> The reason curvature
+                    continuity matters at all was found on sheet metal, not on screens. A flat panel
+                    running into a radius means the curvature jumps from 0 to 1/r at one line, and on
+                    a reflective surface that line is visible: a perfect mirror abruptly becomes a
+                    stretched one. Surfacers check it with <em>curvature combs</em> &mdash; spaced
+                    lines drawn perpendicular to the curve, each as long as the curvature at that
+                    point. Combs that meet at the join are acceptable; combs tangential to each other
+                    are better; and the same test can be applied to the comb's own rate of change.
+                    None of this is specialist knowledge in product design, and type designers work
+                    to it too, often by eye rather than by arithmetic.
+                </li>
+                <li id="bezier-1960s">
+                    <strong>1960s &mdash; Pierre Bézier, at Renault.</strong> The corners here are cubic
+                    Béziers, and they came out of the same industry. Bézier spent decades at
+                    Renault and developed them for car body design; Paul de Casteljau was working out
+                    the same mathematics at Citroën around the same time. The web draws rounded
+                    corners with a tool built to draw fenders.
+                </li>
+                <li id="hein-1959">
+                    <strong>1959 &mdash; Piet Hein.</strong> Named it and put it to work:
+                    <em>superellipse</em> for the general case, <em>supercircle</em> when the axes are
+                    equal. He was not after a new family of curves but a specific problem &mdash;
+                    Sergels Torg in Stockholm needed a form that held the square together without
+                    being static as a circle or hard as a rectangle. What he arrived at is
+                    <a href="https://www.johndcook.com/blog/2014/06/07/swedish-superellipse/" target="_blank" rel="noopener"><span class="link-text">exponent 5/2 with axes at 6:5</span></a>, and the fountain
+                    is still that shape. He carried it on into tables, furniture and jewellery.
+                </li>
+                <li id="panholzer-1966">
+                    <strong>1966 &mdash; Peter Panholzer.</strong> Coined <em>squircle</em>, as an
+                    architect working for Gerald Robinson, after Robinson read Piet Hein in
+                    Scientific American and suggested the shape for a project. Panholzer drew fifteen
+                    of them by hand on vellum over graph paper, from exponent 2.6 to 4.0, and
+                    surveyed which people preferred: about 3.1. He then computed the exponent whose
+                    area sits exactly halfway between the circle's and the square's &mdash; 3.1620,
+                    close to π but not π &mdash; and had a conference table built at it. Robinson, for
+                    his part, designed a parking garage at exponent <em>e</em>.
+                </li>
+                <li id="nokia-2011">
+                    <strong>2011 &mdash; Nokia.</strong> Used the shape as an identity rather than a
+                    detail: <a href="https://en.wikipedia.org/wiki/Squircle#Uses" target="_blank" rel="noopener"><span class="link-text">many Nokia handsets</span></a>
+                    carry a squircle touchpad button, and MeeGo's Harmattan built its whole icon
+                    language on it &mdash; documented by the community that reverse-engineered the
+                    grid, in
+                    <a href="https://meegoicons.com/the-squircle-design-philosophy/" target="_blank" rel="noopener"><span class="link-text">The squircle
+                    design philosophy</span></a>, rather than in a published Nokia specification.
+                </li>
+                <li id="apple-2013">
+                    <strong>2013 &mdash; Apple.</strong> Shipped a continuous corner across the
+                    platform, which is where the idea that a corner could be something other than a
+                    quarter circle stopped being a specialist concern. It is not a superellipse: it keeps a
+                    circular arc at the apex with Bézier shoulders either side, and Apple's own name
+                    for it is
+                    <a href="https://developer.apple.com/documentation/swiftui/roundedcornerstyle/continuous" target="_blank" rel="noopener"><span class="link-text">continuous</span></a>.
+                    On the exponent, the sources are about different things rather than in conflict.
+                    <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">Wikipedia</span></a> calls the icon
+                    shape an approximation of a squircle that is <em>actually a quintic
+                    superellipse</em> &mdash; quintic meaning fifth degree, so exponent 5, not the
+                    squircle's 4. The word itself is not settled either: Cook notes that
+                    <a href="https://www.johndcook.com/blog/2018/02/13/squircle-curvature/" target="_blank" rel="noopener"><span class="link-text">some
+                    sources define the squircle as p&nbsp;=&nbsp;4 and others as p&nbsp;=&nbsp;5</span></a>,
+                    and reports exponent 4 in some other Apple designs. Neither is the
+                    corner style itself, which is not a superellipse at all: that is the whole reason
+                    Figma stopped fitting exponents to it.
+                    <a href="https://grida.co/docs/math/superellipse" target="_blank" rel="noopener"><span class="link-text">Grida's write-up</span></a> says the same and adds a
+                    heuristic for the other direction, <code>n(s) &asymp; 2 + 8s&sup2;</code>,
+                    which puts 60% smoothing near exponent 4.9 &mdash; so the two shapes land
+                    close together at the setting everyone uses, while remaining different
+                    constructions.
+                </li>
+                <li id="figma-2018">
+                    <strong>2018 &mdash; Figma.</strong> Could not fit a single exponent to Apple's
+                    curve, so they
+                    <a href="https://www.figma.com/blog/desperately-seeking-squircles/" target="_blank" rel="noopener"><span class="link-text">derived a
+                    construction with a parameter</span></a> instead of tracing a path. That parameter is
+                    corner smoothing, and it is the reason the shape can be turned down for an
+                    element that is long and thin. Their working also produced a
+                    <a href="https://en.wikipedia.org/wiki/Euler_spiral" target="_blank" rel="noopener"><span class="link-text">clothoid</span></a> &mdash; the
+                    curve that bends at a constant rate, which is why roads are laid out with it
+                    &mdash; and they dropped it: turning the smoothing up made the corner's arc
+                    drift rather than stay put, and the shape needed segments more complex than the
+                    cubic Béziers their renderer draws.
+                </li>
+                <li id="css-2025">
+                    <strong>2025 &mdash; CSS.</strong> <code>corner-shape</code> puts the Lamé family
+                    into the platform: <code>squircle</code> is exponent 4, and
+                    <code>superellipse(k)</code> takes any exponent as 2<sup>k</sup>.
+                </li>
+                <li>
+                    <strong>corner.js.</strong> Draws Figma's construction where CSS cannot, and
+                    steps aside where it can. A curve from 1818, a name from 1966, a criterion from
+                    the paint shop, a parametrization from 2018: none of it is ours.
+                </li>
+            </ul>
+            <p>
+                <strong>How much this matters depends on the dimension</strong>, and it is worth
+                being honest about which one a web page is in. In 2D, tangent continuity is usually
+                enough: a square rounded with quadratic arcs, with cubic ones, or with a superellipse
+                all look fine, and the difference is easier to see than to name even when you can see
+                it. It is in shaded 3D that curvature discontinuity becomes glaring &mdash; the
+                artefact is called <em>broken highlights</em>, and CAD packages ship zebra-stripe
+                analysis specifically to hunt for it before a surface goes to tooling. So a
+                continuous corner on a screen is a refinement, not a rescue.
+            </p>
+            <p>
+                The same order of continuity turns up wherever a smooth appearance is computed rather
+                than drawn. <a href="https://en.wikipedia.org/wiki/Smoothstep" target="_blank" rel="noopener"><span class="link-text">Smoothstep</span></a> is only
+                C1 continuous, which is why a displacement or bump shader built on it can still show a
+                seam; Perlin's own
+                <a href="https://en.wikipedia.org/wiki/Smoothstep#Variants" target="_blank" rel="noopener"><span class="link-text">improved variant</span></a> is C2.
+                Two notations are in circulation for this and they are not interchangeable: C for
+                parametric continuity, G for geometric.
+            </p>
+            <p>
+                <strong>On sourcing.</strong> The curve, the quartic, Nokia's button and Apple's
+                approximation are from Wikipedia and Apple's own documentation. The 1966 coinage and
+                the 3.1620 figure rest on a single account,
+                <a href="https://www.johndcook.com/blog/2019/04/02/history-of-the-term-squircle/" target="_blank" rel="noopener"><span class="link-text">John
+                D. Cook's</span></a>, written after Panholzer contacted him with his evidence; there is no
+                published paper behind it, and it is here on that footing rather than as an
+                established fact.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Real <details>, so the answers are in the DOM whether or not they are open: a crawler reads
+     them, ctrl+F finds them, and nothing has to be scripted. -->
+<section id="faq" style="background: var(--bg-section)">
+    <div class="wrap">
+        <div class="section-head">
+            <p class="kicker">Questions</p>
+            <h2>Continuous curvature,<br>answered</h2>
+        </div>
+
+        <div class="faq">
+            <details data-corner-js>
+                <summary><span>How do I get squircle corners in CSS?</span></summary>
+                <p>
+                    That depends on which curve you mean, and the difference is the point.
+                    A squircle is a superellipse: where the browser has <code>corner-shape</code>,
+                    one declaration does it,
+                    <code>border-radius: 20px; corner-shape: squircle</code> &mdash; corner.js only
+                    fills in where that property is missing, drawing the same curve as a
+                    <code>clip-path</code>. The Apple-like <strong>continuous</strong> corner has no
+                    CSS equivalent in any browser, so <code>data-corner-js</code> always
+                    draws. Either way the shape comes from the <code>border-radius</code> already in
+                    your stylesheet.
+                </p>
+            </details>
+            <details data-corner-js>
+                <summary><span>What is the difference between a squircle and Apple&rsquo;s corner?</span></summary>
+                <p>
+                    A squircle is a superellipse, <code>|x|<sup>4</sup> + |y|<sup>4</sup> = 1</code>.
+                    Apple&rsquo;s corner is not a superellipse at all: it is a circular arc with a
+                    cubic Bézier shoulder either side, which is why no single exponent reproduces
+                    it. By the definition, then, Apple's corner is not a squircle: it is a
+                    <em>curvature-continuous</em> corner &mdash; G2 to a draftsman. Figma reached the same conclusion by measuring the shape and publishing the
+                    attempt &mdash;
+                    <a href="https://www.figma.com/blog/desperately-seeking-squircles/" target="_blank" rel="noopener"><span class="link-text">Desperately
+                    seeking squircles</span></a> &mdash; and derived a construction with a smoothing
+                    parameter instead of fitting one exponent. That construction is
+                    <code>data-corner-js</code> here.
+                </p>
+            </details>
+            <details data-corner-js>
+                <summary><span>What does corner smoothing actually do?</span></summary>
+                <p>
+                    It splits the 90&deg; of a corner between an arc and two Bézier shoulders.
+                    <code>--corner-smoothing: 0</code> leaves the whole angle as an arc, which is
+                    plain <code>border-radius</code>; <code>1</code> leaves no arc at all. Figma&rsquo;s
+                    value for the Apple-like shape is <code>0.6</code>, and it is the default here.
+                </p>
+            </details>
+            <details data-corner-js>
+                <summary><span>Does <code>corner-shape</code> work in Safari and Firefox?</span></summary>
+                <p>
+                    Not yet &mdash; it is Chromium-only. The
+                    <a href="#support">support table</a> above measures the browser you are reading
+                    this in rather than quoting a version. corner.js is the fallback for the other
+                    two, and steps aside where the property exists.
+                </p>
+            </details>
+            <details data-corner-js>
+                <summary><span>Why does my <code>box-shadow</code> disappear on a squircle?</span></summary>
+                <p>
+                    Because <code>clip-path</code> removes <code>box-shadow</code> and
+                    <code>filter: drop-shadow</code> from the element it clips, and halves the width
+                    of its <code>border</code>. corner.js redraws both as sibling SVGs along the
+                    same path &mdash; which is why every drawn element is moved into a wrapper
+                    <code>&lt;div&gt;</code>: the siblings need an ancestor that is not clipped.
+                </p>
+            </details>
+            <details data-corner-js>
+                <summary><span>Is there a React, Vue or Svelte binding?</span></summary>
+                <p>
+                    No package and no boilerplate &mdash; plain vanilla JavaScript, inside all of
+                    them, and React, Vue, Solid and Turbo are mounted and measured live on this
+                    page. Drawing is not the hard part:
+                    <code>data-corner-js</code> in JSX or a template is enough for that,
+                    since nothing is encapsulated and the attribute lands in the real DOM.
+                </p>
+                <p>
+                    What matters is <strong>who owns the parent</strong>. corner.js moves every
+                    drawn element into a wrapper <code>&lt;div&gt;</code>, while the reconciler still
+                    holds the parent it rendered into &mdash; measured in Chrome, both
+                    <code>removeChild</code> and <code>insertBefore</code> then throw
+                    <code>NotFoundError</code>. So inside a framework subtree, render the wrapper
+                    yourself — it is reused, not replaced — and call <code>apply</code> on the container after mounting.
+                </p>
+                <pre><code>&lt;div data-corner-shadow-wrap style="position: relative"&gt;
+    &lt;div className="card" data-corner-js&gt;…&lt;/div&gt;
+&lt;/div&gt;
+
+useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])</code></pre>
+                <p>
+                    The wrapper has to be positioned, because the shadow SVG anchors to the
+                    nearest positioned ancestor. The element keeps its own size, and it is only
+                    moved into a wrapper when a shadow or a border needs redrawing.
+                    See <a href="#use">Integration</a>.
+                </p>
+            </details>
+            <details data-corner-js>
+                <summary><span>Can I animate or resize an element with a drawn corner?</span></summary>
+                <p>
+                    It depends on what is moving. <strong>Transform and opacity: yes</strong>, with
+                    nothing to do &mdash; the path is measured in the layout box, which a transform
+                    does not touch, and it scales as vector along with the element.
+                    <strong>Size: yes</strong> &mdash; every element carries its own
+                    <code>ResizeObserver</code>, so a width or height animation redraws the path,
+                    the shadow and the border per frame.
+                </p>
+                <p>
+                    <strong>An animated <code>border-radius</code> does not follow.</strong> Nothing
+                    observes a style change: the box is unchanged, so no callback exists. The only
+                    two things watched are the box and the <code>data-corner-js</code> attribute.
+                    Drive it yourself &mdash; <code>cornerjs.refresh(el)</code> per frame is what
+                    the sliders above do on every <code>input</code> event.
+                </p>
+            </details>
+            <details data-corner-js>
+                <summary><span>What is a superellipse, and who invented the squircle?</span></summary>
+                <p>
+                    The curve is Gabriel Lamé&rsquo;s, from 1818. The shape was popularized by Piet
+                    Hein for Stockholm&rsquo;s Sergels torg in 1959, and the word &ldquo;squircle&rdquo;
+                    is younger than either. <a href="#history">History</a> has the sources.
+                </p>
+            </details>
+        </div>
+    </div>
+</section>
+
+<section id="license">
+    <div class="wrap">
+        <div class="section-head">
+            <p class="kicker">License</p>
+            <h2>License? MIT&#8239;&#128640;</h2>
+            <p>
+                You can read it
+                <a href="https://github.com/tschroeter/corner-js/blob/main/LICENSE" target="_blank" rel="noopener"><span class="link-text">here</span></a>.
+                Use it, ship it, sell what you build with it. Keep the notice.
+            </p>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+    <div class="wrap footer-row">
+        <!-- The closing year is written at runtime, so the range cannot go stale on its own. -->
+        <p>&copy; 2025&ndash;<span id="footerYear">2026</span>
+            <a href="https://tschroeter.com" target="_blank" rel="noopener"><span class="link-text">tschroeter</span></a></p>
+        <p>
+            MIT License &mdash;
+            <a href="https://github.com/tschroeter/corner-js" target="_blank" rel="noopener"><span class="link-text">github.com/tschroeter/corner-js</span></a>
+        </p>
+    </div>
+</footer>
+
+<script>
+(function ()
+{
+    var stage = document.getElementById('stage');
+    var preview = document.getElementById('preview');
+    var previewLabel = document.getElementById('previewLabel');
+    var nativeCorners = !!(window.CSS && CSS.supports && CSS.supports('corner-shape', 'squircle'));
+    var generated = document.getElementById('generated');
+    var generatedCss = document.getElementById('generatedCss');
+
+    var controls = {};
+    ['size', 'radius', 'link', 'tl', 'tr', 'br', 'bl',
+     'smooth', 'blur', 'offset', 'alpha', 'borderWidth',
+     'transparent', 'bgColor', 'objColor', 'curve', 'offsetX', 'spread', 'exponent', 'compare',
+     'shadowOn'].forEach(function (id)
+     {
+        controls[id] = document.getElementById(id);
+    });
+
+    function out (id) { return document.getElementById(id); }
+
+    // A stylesheet, not inline styles: refresh({ reread: true }) clears the target's inline
+    // box-shadow to undo its own, and cannot tell the page's apart from its own.
+    var live = document.createElement('style');
+    document.head.appendChild(live);
+
+    // `native` is the corner-shape value where one exists; continuous has none, which is why it
+    // is the one mode that always goes through the module. The radius DOUBLES on the native path:
+    // a superellipse needs twice the border-radius to read as equally round, and corner.js applies
+    // that factor internally, so without it the two branches of one option would disagree.
+    var CURVES = {
+        continuous: { mode: 'continuous', module: true,
+            note: 'Curvature continuous: it ramps up out of the straight edge, peaks, and comes back down. Drawn by corner.js.' },
+        // Exponent-driven, so its mode, its native value and its note are computed per reading
+        // rather than fixed. Native takes superellipse(k) where the exponent is 2^k, so k is
+        // log2(n) -- verified against the property: superellipse(2) computes to squircle, which is
+        // exponent 4, and superellipse(1) to round, which is 2.
+        superellipse: { module: !nativeCorners, doubleRadius: nativeCorners, exponent: true },
+        arc: { mode: '', module: false, native: 'round',
+            note: 'Tangent continuous only: the direction matches at the join but the curvature jumps from 0 to 1/r. Plain border-radius, nothing runs.' }
+    };
+
+    // Switching curve REPLACES the element. corner.js fixes the mode at boot
+    // (watchAndApply keeps it in a closure, and _moduleBooted stops a second run), so
+    // adding or removing a class afterwards does nothing at all -- the shape simply would
+    // not change. A fresh node has neither the flag nor the wrapper, so booting it again
+    // is the honest way to switch.
+    function rebuildPreview(curve, spec)
+    {
+        var current = document.getElementById('preview');
+        // The module's wrapper is always the DIRECT parent. closest() walked past it whenever the
+        // preview was drawn natively and had no wrapper of its own -- and found the ARTBOARD's
+        // wrapper, so switching curves replaced the whole stage and took .preview-stack with it.
+        var parent = current.parentElement;
+        var host = parent && parent.hasAttribute('data-corner-shadow-wrap') ? parent : current;
+        var fresh = document.createElement('div');
+        fresh.id = 'preview';
+        fresh.className = 'preview';
+        fresh.innerHTML = '<span id="previewLabel"></span>';
+        if (spec.mode) fresh.dataset.cornerJs = spec.mode;
+        if (spec.native && nativeCorners) fresh.style.cornerShape = spec.native;
+        host.replaceWith(fresh);
+        preview = fresh;
+        previewLabel = document.getElementById('previewLabel');
+        // apply() rather than waiting for the observer: it delivers on a microtask, and the
+        // refresh() two lines below would otherwise run against an unbooted element.
+        if (spec.module && window.cornerjs) window.cornerjs.apply(stage);
+    }
+
+    function values()
+    {
+        var linked = controls.link.checked;
+        var r = parseInt(controls.radius.value, 10);
+        return {
+            curve: controls.curve.value,
+            size: parseInt(controls.size.value, 10),
+            linked: linked,
+            radius: r,
+            corners: linked
+                ? [r, r, r, r]
+                : ['tl', 'tr', 'br', 'bl'].map(function (id)
+                {
+                    return parseInt(controls[id].value, 10);
+                }),
+            smoothPercent: parseInt(controls.smooth.value, 10),
+            exponent: parseFloat(controls.exponent.value),
+            blur: parseInt(controls.blur.value, 10),
+            offsetX: parseInt(controls.offsetX.value, 10),
+            offset: parseInt(controls.offset.value, 10),
+            spread: parseInt(controls.spread.value, 10),
+            shadowOn: controls.shadowOn.checked,
+            alpha: parseInt(controls.alpha.value, 10),
+            borderWidth: parseInt(controls.borderWidth.value, 10),
+            compare: controls.compare.checked && controls.curve.value !== 'arc',
+            transparent: controls.transparent.checked,
+            background: controls.bgColor.value,
+            object: controls.objColor.value
+        };
+    }
+
+    // Smoothing is a PERCENT in the UI (Figma's own unit, and what every reference
+    // playground shows) and a 0..1 number in CSS, because that is what
+    // --corner-smoothing is. One conversion, here.
+    function smoothing(v) { return (v.smoothPercent / 100).toFixed(2); }
+
+    function shadowCss(v)
+    {
+        // The toggle decides IF there is a shadow; the sliders decide what it looks like. Opacity 0
+        // still means none, so the two cannot disagree.
+        if (!v.shadowOn || v.alpha === 0) return '';
+        return v.offsetX + 'px ' + v.offset + 'px ' + v.blur + 'px ' + v.spread + 'px ' +
+            'rgba(0, 0, 0, ' + (v.alpha / 100).toFixed(2) + ')';
+    }
+
+    function borderCss(v)
+    {
+        return v.borderWidth === 0 ? '' : v.borderWidth + 'px solid rgba(0, 0, 0, 0.3)';
+    }
+
+    function radiusCss(v)
+    {
+        var factor = v.doubleRadius ? 2 : 1;
+        return v.linked
+            ? (v.radius * factor) + 'px'
+            : v.corners.map(function (n) { return (n * factor) + 'px'; }).join(' ');
+    }
+
+    function cssSnippet(v)
+    {
+        var rule = ['#preview {'];
+        // The literal colour, read back out of the token: the shown rule has to be copyable, and a
+        // custom property only this page declares is not.
+        rule.push('    background: ' + (v.compare ? compareFill() : v.object) + ';');
+        rule.push('    border-radius: ' + radiusCss(v) + ';');
+        if (CURVES[v.curve].native && nativeCorners)
+        {
+            rule.push('    corner-shape: ' + CURVES[v.curve].native + ';');
+        }
+        if (v.curve === 'continuous')
+        {
+            rule.push('    --corner-smoothing: ' + smoothing(v) + ';');
+        }
+        if (shadowCss(v)) rule.push('    box-shadow: ' + shadowCss(v) + ';');
+        if (borderCss(v)) rule.push('    border: ' + borderCss(v) + ';');
+        rule.push('}');
+        rule.push('');
+        rule.push('#preview {');
+        rule.push('    width: ' + v.size + 'px;');
+        rule.push('    height: ' + v.size + 'px;');
+        rule.push('}');
+        rule.push('');
+        rule.push('[data-corner-shadow-wrap]:has(> #preview) {');
+        rule.push('    width: ' + v.size + 'px;');
+        rule.push('    height: ' + v.size + 'px;');
+        rule.push('}');
+        return rule.join('\n');
+    }
+
+    // MARKUP, and there is no JS panel any more: corner.js finds its own targets, so what a
+    // consumer writes is one attribute. This panel used to print the dataset assignments and
+    // an apply() call, which described an API that no longer has to be used.
+    function markupSnippet(v)
+    {
+        if (!v.drawnByModule)
+        {
+            return [
+                '<!-- Nothing to mark: this curve is the browser\'s own, from the',
+                '     corner-shape line in the CSS above. -->',
+                '<div id="preview"></div>'
+            ].join('\n');
+        }
+        return '<div id="preview" data-corner-js="' + CURVES[v.curve].mode + '"></div>';
+    }
+
+    var currentCurve = null;
+    var currentMode = null;
+
+    // BLACK OR WHITE, whichever the eye can actually read on that fill. Not a lightness threshold at
+    // 50%: the crossover where white overtakes black is at a relative luminance of about 0.179, so a
+    // mid grey picks the wrong one. CSS color-contrast() would be one line, but no browser ships it.
+    function readableOn(hex)
+    {
+        var match = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(hex).trim());
+
+        if (!match) return '';
+
+        var channel = function (pair) {
+            var v = parseInt(pair, 16) / 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        };
+        var luminance = 0.2126 * channel(match[1]) + 0.7152 * channel(match[2]) + 0.0722 * channel(match[3]);
+
+        return luminance > 0.1791 ? '#141414' : '#ffffff';
+    }
+
+    function compareFill()
+    {
+        return getComputedStyle(document.documentElement).getPropertyValue('--compare-drawn').trim();
+    }
+
+    function apply()
+    {
+        var v = values();
+        var spec = CURVES[v.curve];
+        if (spec.exponent)
+        {
+            spec.mode = 'superellipse-' + v.exponent;
+            spec.native = 'superellipse(' + (Math.log(v.exponent) / Math.LN2).toFixed(4) + ')';
+            spec.note = nativeCorners
+                ? 'Lamé curve. Your browser has corner-shape, so the browser draws it as ' +
+                  spec.native + ' and corner.js steps aside.'
+                : 'Lamé curve, drawn by corner.js — no corner-shape in this browser.';
+        }
+        if (v.curve !== currentCurve || (spec.exponent && spec.mode !== currentMode))
+        {
+            rebuildPreview(v.curve, spec);
+            currentCurve = v.curve;
+            currentMode = spec.mode;
+        }
+        v.doubleRadius = !!spec.doubleRadius;
+        v.drawnByModule = !!spec.module;
+
+        out('sizeOut').textContent = v.size + 'px';
+        out('radiusOut').textContent = v.radius + 'px';
+        out('smoothOut').textContent = v.smoothPercent + '%';
+        out('blurOut').textContent = v.blur + 'px';
+        out('offsetXOut').textContent = v.offsetX + 'px';
+        out('offsetOut').textContent = v.offset + 'px';
+        out('spreadOut').textContent = v.spread + 'px';
+        out('alphaOut').textContent = v.alpha + '%';
+        out('borderOut').textContent = v.borderWidth + 'px';
+        ['tl', 'tr', 'br', 'bl'].forEach(function (id, i)
+        {
+            out(id + 'Out').textContent = v.corners[i] + 'px';
+        });
+        document.getElementById('perCorner').hidden = v.linked;
+        document.getElementById('shadowControls').hidden = !v.shadowOn;
+        // Smoothing exists only in the continuous construction. Shown for it, replaced by one
+        // line of explanation otherwise -- a control that cannot change anything is worse than
+        // its absence, and the same reasoning that keeps a clothoid off the curve list.
+        var smoothable = v.curve === 'continuous';
+        var exponential = !!CURVES[v.curve].exponent;
+        document.getElementById('smoothWrap').hidden = !smoothable;
+        document.getElementById('exponentWrap').hidden = !exponential;
+        document.getElementById('smoothAbsent').hidden = smoothable || exponential;
+        if (exponential)
+        {
+            out('exponentOut').textContent = v.exponent;
+            out('exponentNote').textContent = v.exponent === 4
+                ? '4 is the squircle, and what the CSS keyword resolves to.'
+                : (v.exponent === 2
+                    ? '2 is the circle — identical to a plain border-radius.'
+                    : (v.exponent === 5
+                        ? '5 is the closest single exponent to Apple\'s curve, and still off.'
+                        : 'Any exponent draws: the construction is generic in n.'));
+        }
+        previewLabel.textContent = v.size + ' × ' + v.size;
+        previewLabel.style.color = readableOn(v.compare ? compareFill() : v.object);
+
+        // One variable, read by BOTH size rules (see page.css on why there are two).
+        stage.style.setProperty('--preview-size', v.size + 'px');
+
+        // The live rule carries two custom properties the shown snippet does not: the off state
+        // restates shadow and border with !important to beat corner.js's own inline overrides.
+        // A demo artefact, so it stays out of the generated code.
+        live.textContent = cssSnippet(v).replace(/\/\*[\s\S]*?\*\/\n/, '') +
+            '\n#preview {' +
+            '\n    --demo-shadow: ' + (shadowCss(v) || 'none') + ';' +
+            '\n    --demo-border-color: ' + (v.borderWidth ? 'rgba(0, 0, 0, 0.3)' : 'transparent') + ';' +
+            '\n}';
+        stage.dataset.continuity = v.drawnByModule ? 'on' : 'off';
+        // COMPARISON takes the colours over: the two fills ARE the reading, so a chosen object
+        // colour would destroy it. The wells are hidden rather than ignored while it is on.
+        stage.dataset.compare = v.compare ? 'on' : 'off';
+        document.getElementById('compareWrap').hidden = v.curve === 'arc';
+        document.getElementById('compareNote').hidden = !v.compare;
+        ['bgColor', 'objColor', 'transparent'].forEach(function (id)
+        {
+            controls[id].closest('.control').hidden = v.compare;
+        });
+        document.getElementById('previewArc').style.borderRadius = radiusCss(v);
+
+        // The artboard: either the checkerboard (so a clip that is off by a pixel shows
+        // up) or a flat colour of your choosing.
+        stage.dataset.background = v.transparent ? 'transparent' : 'colour';
+        stage.style.setProperty('--stage-colour', v.background);
+
+        // reread, because the border and shadow are cached on first run: by the second,
+        // getComputedStyle would read back the module's own `box-shadow: none` and
+        // `border-color: transparent` instead of the rule above.
+        if (window.cornerjs) window.cornerjs.refresh(preview, { reread: true });
+
+        generatedCss.textContent = cssSnippet(v);
+        generated.textContent = markupSnippet(v);
+        out('codeHeadTwo').innerHTML = v.drawnByModule
+            ? 'Generated &mdash; markup'
+            : 'Generated &mdash; markup (nothing to switch on)';
+        report(v);
+    }
+
+    function report(v)
+    {
+        var d = derived(v);
+        out('dBudget').textContent = px(d.budget);
+        out('dRadius').textContent = px(d.radiusUsed) +
+            (d.radiusUsed < v.radius ? ' ← ' + v.radius : '');
+        out('dReach').textContent = px(d.reach);
+        out('dArc').textContent = d.arcDeg === null ? '–' : Math.round(d.arcDeg) + '° of 90°';
+        out('dSmooth').textContent = d.smoothUsed === null ? '–' : Math.round(d.smoothUsed * 100) + '%';
+
+        var requested = v.smoothPercent / 100;
+        var note = '';
+        if (!v.drawnByModule)
+        {
+            note = 'Nothing to derive: this curve is not drawn by corner.js, so there is no path to read back.';
+        }
+        else if (d.smoothUsed !== null && d.smoothUsed < requested - 0.01)
+        {
+            note = 'Budget reached: smoothing is capped to ' + Math.round(d.smoothUsed * 100) +
+                '% here. At ' + v.smoothPercent + '% the corner would reach ' +
+                Math.round((1 + requested) * d.radiusUsed) + 'px along each edge, and the short ' +
+                'side allows ' + Math.round(d.budget) + 'px per corner. Roundness is spent first ' +
+                'and smoothing gives way — at radius = budget it reaches 0% and the corner is a ' +
+                'plain arc, so a capsule end stays clean.';
+        }
+        else if (d.radiusUsed < v.radius)
+        {
+            note = 'Radius capped at the budget, min(width, height) / 2.';
+        }
+        out('budgetNote').textContent = note;
+
+        out('continuityNote').textContent = CURVES[v.curve].note;
+    }
+
+    // Every number here is READ BACK OUT of the path corner.js actually drew, not
+    // recomputed from the same formulas in a second place. `M <x> 0` is
+    // `width - p` by construction, and the arc command carries arcSectionLength,
+    // which is sin(arcMeasure / 2) * radius * sqrt(2) -- invertible. So this panel
+    // reports the module's own output and cannot drift away from it, which a
+    // duplicated copy of the maths would do the first time either side changed.
+    function derived(v)
+    {
+        var box = preview.getBoundingClientRect();
+        var budget = Math.min(box.width, box.height) / 2;
+        // The TOP-RIGHT corner, because that is the one the path starts at and the one
+        // `M <x> 0` therefore reports.
+        var radiusUsed = Math.min(v.corners[1], budget);
+        var result = { budget: budget, radiusUsed: radiusUsed, reach: null, arcDeg: null, smoothUsed: null };
+        var path = getComputedStyle(preview).clipPath;
+        if (!v.drawnByModule || path === 'none' || radiusUsed <= 0) return result;
+
+        var move = /path\("M\s+(-?[\d.]+)\s+0/.exec(path);
+        if (move) result.reach = box.width - parseFloat(move[1]);
+        if (result.reach !== null) result.smoothUsed = result.reach / radiusUsed - 1;
+
+        // THE ARC ANGLE, from the arc's CHORD: chord = 2 * r * sin(theta / 2), so
+        // theta = 2 * asin(chord / 2r). Getting the chord takes two cases, because
+        // Chrome NORMALISES clip-path in the computed value -- corner.js writes the
+        // relative `a`, and getComputedStyle hands back an absolute `A` whose numbers
+        // are the arc's ENDPOINT, not its extent. Reading the relative form that is no
+        // longer there is what made this panel report 0 degrees at every setting.
+        var chord = null;
+        var relative = /\sa\s+[\d.]+\s+[\d.]+\s+[\d.]+\s+[\d.]+\s+[\d.]+\s+(-?[\d.]+)\s+(-?[\d.]+)/.exec(path);
+        if (relative)
+        {
+            chord = Math.hypot(parseFloat(relative[1]), parseFloat(relative[2]));
+        }
+        else
+        {
+            // The two numbers immediately before `A` are the current point, whatever
+            // command they belong to.
+            var absolute = /(-?[\d.]+)\s+(-?[\d.]+)\s+A\s+([\d.]+)\s+[\d.]+\s+[\d.]+\s+[\d.]+\s+[\d.]+\s+(-?[\d.]+)\s+(-?[\d.]+)/.exec(path);
+            if (absolute)
+            {
+                chord = Math.hypot(
+                    parseFloat(absolute[4]) - parseFloat(absolute[1]),
+                    parseFloat(absolute[5]) - parseFloat(absolute[2])
+                );
+            }
+        }
+        if (chord !== null)
+        {
+            result.arcDeg = 2 * Math.asin(Math.min(1, chord / (2 * radiusUsed))) * 180 / Math.PI;
+        }
+        return result;
+    }
+
+    function px (value) { return value === null ? '–' : Math.round(value) + 'px'; }
+
+    Object.keys(controls).forEach(function (key)
+    {
+        controls[key].addEventListener('input', apply);
+    });
+
+    document.getElementById('copy').addEventListener('click', function ()
+    {
+        var button = this;
+        var both = generatedCss.textContent + '\n\n' + generated.textContent;
+        navigator.clipboard.writeText(both).then(function ()
+        {
+            button.textContent = 'Copied';
+            setTimeout(function () { button.textContent = 'Copy both'; }, 1200);
+        });
+    });
+
+    // A reload further down the page paints at the top first and then jumps to the restored
+    // offset. Anything that animates in on load plays inside that frame, in the corner of the eye,
+    // so it is switched off for exactly this case -- read before any of it can run.
+    if (window.scrollY > 0) document.documentElement.dataset.restored = 'true';
+
+    // ---- in-page links scroll, and leave the URL alone ----
+    //
+    // One delegated listener for every same-page anchor: the nav, the sheet, the FAQ's
+    // cross-references, the wordmark. The default action would write the hash into the URL and
+    // stack a history entry per click; scrolling by hand does neither, so the address stays clean
+    // and the browser keeps restoring the position on reload from its own record.
+    var jumpMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+    function scrollToId(id)
+    {
+        var target = id && document.getElementById(id);
+
+        if (!target) return false;
+
+        target.scrollIntoView({ behavior: jumpMotion.matches ? 'auto' : 'smooth' });
+
+        return true;
+    }
+
+    document.addEventListener('click', function (event)
+    {
+        var link = event.target.closest ? event.target.closest('a[href^="#"]') : null;
+
+        if (!link || link.hasAttribute('download') || link.target) return;
+
+        var id = decodeURIComponent(link.getAttribute('href').slice(1));
+
+        if (scrollToId(id)) event.preventDefault();
+    });
+
+    // ---- the hash is for arriving, not for bookkeeping ----
+    //
+    // Rewriting it on every scroll fought the browser, which restores a scroll offset per history
+    // entry by itself. The re-scroll is not redundant: the page grows after first paint, so the
+    // anchor has usually moved by the time it can be trusted.
+    if ('scrollRestoration' in history) history.scrollRestoration = 'auto';
+
+    var landing = decodeURIComponent(location.hash.slice(1));
+    var target = landing && document.getElementById(landing);
+
+    if (target && history.replaceState)
+    {
+        // Deliberately NOT inside requestAnimationFrame: a background tab produces no frames, so
+        // the hash would stay in the URL until the tab was focused. Measured that way round in a
+        // hidden pane, where the callback never ran at all.
+        var moved = false;
+
+        ['wheel', 'touchstart', 'keydown'].forEach(function (type)
+        {
+            window.addEventListener(type, function () { moved = true; }, { once: true, passive: true });
+        });
+
+        function land()
+        {
+            if (moved) return;
+
+            target.scrollIntoView();
+            history.replaceState(null, '', location.pathname + location.search);
+        }
+
+        whenReady(land);
+        // Again once the last late layout has settled -- unless the reader has taken over by then.
+        window.addEventListener('load', land);
+    }
+
+    // ---- the integration tabs ----
+    //
+    // The panels are plain [hidden] elements, so without this script the first one is still
+    // readable rather than all six being stacked.
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.code-tab'));
+
+    tabs.forEach(function (tab)
+    {
+        tab.addEventListener('click', function ()
+        {
+            tabs.forEach(function (other)
+            {
+                var selected = other === tab;
+                other.setAttribute('aria-selected', String(selected));
+                document.getElementById(other.getAttribute('aria-controls')).hidden = !selected;
+            });
+        });
+    });
+
+    // A copy button on every static snippet, added here rather than written into the markup
+    // eight times. The integration examples are meant to be taken whole.
+    Array.prototype.forEach.call(document.querySelectorAll('#use .code'), function (panel)
+    {
+        var head = panel.querySelector('.code-head');
+        var pre = panel.querySelector('pre');
+        if (!head || !pre || !navigator.clipboard) return;
+
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'ghost';
+        button.textContent = 'Copy';
+        button.addEventListener('click', function ()
+        {
+            navigator.clipboard.writeText(pre.textContent).then(function ()
+            {
+                button.textContent = 'Copied';
+                setTimeout(function () { button.textContent = 'Copy'; }, 1200);
+            });
+        });
+        head.appendChild(button);
+    });
+
+    // ---- TABS, but only where the layout has collapsed to one column ----
+    //
+    // Stacked, the control panel is a column the artboard has already pushed off screen. The
+    // groups are found by partitioning at each .panel-group heading, so the desktop markup stays
+    // as it is and a group added later needs nothing here.
+    var panel = document.querySelector('.playground .panel');
+    if (panel)
+    {
+        var groups = [];
+        var current = null;
+        Array.prototype.slice.call(panel.children).forEach(function (child)
+        {
+            if (child.classList.contains('panel-group') || !current)
+            {
+                current = { title: child.classList.contains('panel-group')
+                    ? child.textContent.trim() : 'Curve', nodes: [] };
+                groups.push(current);
+            }
+            current.nodes.push(child);
+        });
+
+        var tabBar = document.createElement('div');
+        tabBar.className = 'panel-tabs';
+        var boxes = groups.map(function (group, index)
+        {
+            var box = document.createElement('div');
+            box.className = 'panel-section';
+            group.nodes.forEach(function (node) { box.appendChild(node); });
+            panel.appendChild(box);
+
+            var tab = document.createElement('button');
+            tab.type = 'button';
+            tab.className = 'panel-tab';
+            tab.textContent = group.title;
+            tab.addEventListener('click', function () { open(index); });
+            tabBar.appendChild(tab);
+            return { box: box, tab: tab };
+        });
+        panel.insertBefore(tabBar, panel.firstChild);
+
+        function open(index)
+        {
+            boxes.forEach(function (entry, i)
+            {
+                entry.box.classList.toggle('is-open', i === index);
+                entry.tab.setAttribute('aria-pressed', String(i === index));
+            });
+        }
+        open(0);
+
+        // The breakpoint lives in ONE place -- this query and the grid rule read the same
+        // number, and a matchMedia listener means a rotation or a resized window switches
+        // mode without a reload.
+        var stacked = window.matchMedia('(max-width: 860px)');
+        function syncTabs() { panel.dataset.tabs = stacked.matches ? 'on' : 'off'; }
+        stacked.addEventListener('change', syncTabs);
+        syncTabs();
+    }
+
+    // ---- pan and zoom, on both artboards ----
+    //
+    // A trackpad pinch arrives as a wheel event with ctrlKey set, a two-finger scroll as a plain
+    // wheel whose deltas already carry the system's momentum -- so there is no inertia to write.
+    // The point under the pointer stays put: with origin top-left a surface point p lands at
+    // x + p * z, so holding it across a zoom gives x' = ox - (ox - x) * z' / z.
+    function panZoom(board, surface, options)
+    {
+        var MIN = 1;
+        var MAX = 12;
+        var zoom = options.start || 1;
+        var report = options.report || function () {};
+        // Where the surface sits at rest, as a fraction of the board -- the hero looks at one
+        // corner, so it starts offset rather than centred.
+        var inset = options.inset || 0;
+        var x = 0;
+        var y = 0;
+
+        function write()
+        {
+            board.style.setProperty('--view-zoom', zoom);
+            board.style.setProperty('--view-x', x + 'px');
+            board.style.setProperty('--view-y', y + 'px');
+            report(zoom);
+        }
+
+        // Enough of the surface has to stay on the board to grab hold of again.
+        function clampPan()
+        {
+            var keep = 32;
+            var w = surface.offsetWidth * zoom;
+            var h = surface.offsetHeight * zoom;
+            x = Math.max(keep - w, Math.min(board.offsetWidth - keep, x));
+            y = Math.max(keep - h, Math.min(board.offsetHeight - keep, y));
+        }
+
+        function rest()
+        {
+            zoom = options.start || 1;
+            x = board.offsetWidth * inset;
+            y = board.offsetHeight * inset;
+            write();
+        }
+
+        function zoomAt(factor, clientX, clientY)
+        {
+            var next = Math.max(MIN, Math.min(MAX, zoom * factor));
+            if (next === zoom) return;
+
+            var board_rect = board.getBoundingClientRect();
+            var surface_rect = surface.getBoundingClientRect();
+            // Where the surface sits when x and y are zero. It is not the board's corner: the
+            // board centres its content and has padding, and leaving this out drifted the anchor
+            // by that offset on every step -- measured at 0.068 of the surface width.
+            // transform-origin is top left, so scaling never moves this edge.
+            var origin_x = surface_rect.left - board_rect.left - x;
+            var origin_y = surface_rect.top - board_rect.top - y;
+            var ox = clientX - board_rect.left - origin_x;
+            var oy = clientY - board_rect.top - origin_y;
+            var ratio = next / zoom;
+
+            x = ox - (ox - x) * ratio;
+            y = oy - (oy - y) * ratio;
+            zoom = next;
+            clampPan();
+            write();
+        }
+
+        function panBy(dx, dy)
+        {
+            x += dx;
+            y += dy;
+            clampPan();
+            write();
+        }
+
+        function centre()
+        {
+            var rect = board.getBoundingClientRect();
+            return [rect.left + rect.width / 2, rect.top + rect.height / 2];
+        }
+
+        function atRest()
+        {
+            return zoom <= (options.start || 1) + 0.001;
+        }
+
+        function onControl(event)
+        {
+            return !!(event.target.closest && event.target.closest('button, input, select, a, label'));
+        }
+
+        // A pinch always zooms. A plain two-finger scroll pans only once the board is zoomed IN --
+        // otherwise the page would stop scrolling wherever the pointer happens to cross a board,
+        // which on a documentation page is worse than not panning at all.
+        board.addEventListener('wheel', function (event)
+        {
+            // ctrlKey is the pinch: the OS sets it whether or not a ctrl key is held.
+            if (event.ctrlKey)
+            {
+                event.preventDefault();
+                zoomAt(Math.exp(-event.deltaY * 0.01), event.clientX, event.clientY);
+                return;
+            }
+            if (atRest()) return;
+            event.preventDefault();
+            panBy(-event.deltaX, -event.deltaY);
+        }, { passive: false });
+
+        // Safari's own pinch. event.scale is cumulative from gesturestart, so it is divided by
+        // the last value to get the step.
+        var gestureScale = 1;
+        board.addEventListener('gesturestart', function (event)
+        {
+            event.preventDefault();
+            gestureScale = 1;
+        });
+        board.addEventListener('gesturechange', function (event)
+        {
+            event.preventDefault();
+            zoomAt(event.scale / gestureScale, event.clientX, event.clientY);
+            gestureScale = event.scale;
+        });
+
+        var dragging = false;
+        var lastX = 0;
+        var lastY = 0;
+
+        board.addEventListener('pointerdown', function (event)
+        {
+            if (event.pointerType === 'touch' || onControl(event)) return;
+            dragging = true;
+            lastX = event.clientX;
+            lastY = event.clientY;
+            board.setPointerCapture(event.pointerId);
+            board.dataset.grabbing = 'true';
+        });
+        board.addEventListener('pointermove', function (event)
+        {
+            if (!dragging) return;
+            panBy(event.clientX - lastX, event.clientY - lastY);
+            lastX = event.clientX;
+            lastY = event.clientY;
+        });
+        board.addEventListener('pointerup', function ()
+        {
+            dragging = false;
+            delete board.dataset.grabbing;
+        });
+
+        // Touch: one finger pans, two pinch about their midpoint and pan with it.
+        var touchDistance = 0;
+        var touchX = 0;
+        var touchY = 0;
+
+        function midpoint(touches)
+        {
+            if (touches.length < 2) return [touches[0].clientX, touches[0].clientY];
+            return [(touches[0].clientX + touches[1].clientX) / 2,
+                    (touches[0].clientY + touches[1].clientY) / 2];
+        }
+
+        function spread(touches)
+        {
+            return Math.hypot(touches[0].clientX - touches[1].clientX,
+                              touches[0].clientY - touches[1].clientY);
+        }
+
+        board.addEventListener('touchstart', function (event)
+        {
+            if (onControl(event)) return;
+            var mid = midpoint(event.touches);
+            touchX = mid[0];
+            touchY = mid[1];
+            touchDistance = event.touches.length === 2 ? spread(event.touches) : 0;
+        }, { passive: true });
+
+        // Same bargain as the wheel: two fingers always pinch, one finger pans only once zoomed
+        // in, so a swipe over the board still scrolls the page at rest.
+        board.addEventListener('touchmove', function (event)
+        {
+            var pinching = event.touches.length === 2 && touchDistance;
+            if (!pinching && atRest()) return;
+
+            var mid = midpoint(event.touches);
+            if (pinching)
+            {
+                var next = spread(event.touches);
+                zoomAt(next / touchDistance, mid[0], mid[1]);
+                touchDistance = next;
+            }
+            panBy(mid[0] - touchX, mid[1] - touchY);
+            touchX = mid[0];
+            touchY = mid[1];
+            event.preventDefault();
+        }, { passive: false });
+
+        board.addEventListener('touchend', function (event)
+        {
+            touchDistance = 0;
+            if (event.touches.length)
+            {
+                var mid = midpoint(event.touches);
+                touchX = mid[0];
+                touchY = mid[1];
+            }
+        });
+
+        // Back to rest, animated -- the transition is added for the reset only, so dragging stays
+        // frame-tight.
+        board.addEventListener('dblclick', function (event)
+        {
+            if (onControl(event)) return;
+            surface.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
+            rest();
+            setTimeout(function () { surface.style.transition = ''; }, 360);
+        });
+
+        rest();
+
+        return {
+            step: function (factor)
+            {
+                var point = centre();
+                zoomAt(factor, point[0], point[1]);
+            },
+            rest: rest
+        };
+    }
+
+    // ---- the components switch ----
+    //
+    // OFF is more than unclipping: corner.js also writes box-shadow: none and a transparent
+    // border inline, so all three have to be cleared to hand the demos back to the stylesheet.
+    // ON goes through refresh(root, { reread: true }).
+    var componentsSection = document.getElementById('components');
+    var componentsToggle = document.getElementById('toggleComponents');
+    if (componentsSection && componentsToggle)
+    {
+        function setComponents(on)
+        {
+            if (on) return window.cornerjs.refresh(componentsSection, { reread: true });
+
+            Array.prototype.forEach.call(
+                componentsSection.querySelectorAll('[data-corner-js]'), function (el)
+                {
+                    el.style.clipPath = '';
+                    el.style.boxShadow = '';
+                    el.style.borderColor = '';
+                });
+            Array.prototype.forEach.call(
+                componentsSection.querySelectorAll('[data-corner-shadow-wrap] > svg'), function (svg)
+                {
+                    svg.style.display = 'none';
+                });
+        }
+
+        componentsToggle.addEventListener('change', function ()
+        {
+            whenReady(function () { setComponents(componentsToggle.checked); });
+        });
+    }
+
+    // ---- the hero's two switches ----
+    //
+    // Both are CSS on one attribute each, and nothing is rebooted: corner.js's clip-path is
+    // inline, so unclipping needs !important, and the comparison outline is a sibling that
+    // only has to be shown or hidden. The two states are therefore the same element, and
+    // any difference you see is the curve and not the layout.
+    var heroDemo = document.getElementById('heroDemo');
+    if (heroDemo)
+    {
+        var heroState = document.getElementById('heroDemoState');
+        var heroHint = document.getElementById('heroDemoHint');
+
+        function heroReport()
+        {
+            var showing = heroDemo.dataset.comparison === 'on';
+            var smoothing = Number(document.getElementById('heroSmooth').value);
+            heroHint.textContent = showing
+                ? (smoothing > 0
+                    ? 'Red shows where the arc reaches past the continuous curve'
+                    : 'Smoothing 0 IS the arc, so the dark shape covers the red exactly')
+                : 'Comparison off — the arc behind is hidden';
+        }
+
+        // Real checkboxes, so `checked` is the state and nothing has to be mirrored into an
+        // aria attribute by hand -- the label association and the keyboard behaviour come
+        // with them.
+        var comparison = document.getElementById('toggleComparison');
+        comparison.addEventListener('change', function ()
+        {
+            heroDemo.dataset.comparison = comparison.checked ? 'on' : 'off';
+            heroReport();
+        });
+        heroReport();
+
+        // ---- zoom ----
+        //
+        // 1x is the whole shape; above that, one corner -- the only way a few pixels of difference
+        // become visible. NOT named `stage`: that is the playground's artboard from the top of this
+        // IIFE, and `var` is function-scoped, so reusing it sent every attribute apply() writes to
+        // the wrong element.
+        var heroStage = heroDemo.querySelector('.hero-demo-stage');
+        var heroZoomLabel = document.getElementById('heroZoom');
+        var heroView = panZoom(heroStage, heroDemo.querySelector('.hero-demo-stack'), {
+            start: parseFloat(getComputedStyle(document.documentElement)
+                .getPropertyValue('--hero-zoom')) || 3,
+            inset: 0.08,
+            report: function (zoom)
+            {
+                heroZoomLabel.textContent = (zoom % 1 ? zoom.toFixed(1) : zoom) + '\u00d7';
+            }
+        });
+
+        // ---- the hero's two sliders ----
+        //
+        // One pair of values drives BOTH shapes: the headline's frame and the preview. They are
+        // written as custom properties on the hero root -- --corner-smoothing inherits, so every
+        // corner below it picks the new value up on the next refresh.
+        var heroRoot = document.getElementById('heroRoot');
+        var heroRadius = document.getElementById('heroRadius');
+        var heroSmooth = document.getElementById('heroSmooth');
+
+        function heroShape()
+        {
+            var radius = Number(heroRadius.value);
+            var smoothing = Number(heroSmooth.value) / 100;
+
+            // Capped at a quarter of the frame's height, or the reach spends the whole budget and
+            // the smoothing slider below has nothing left to change. See --frame-radius in page.css.
+            heroRoot.style.setProperty('--frame-radius', 'min(' + radius + 'px, 0.33em)');
+            // Same cap as the stylesheet default: at half the board every curve is a circle.
+            heroRoot.style.setProperty('--hero-radius',
+                'min(' + radius * 2.4 + 'px, calc(var(--hero-shape) * 0.42))');
+            heroRoot.style.setProperty('--corner-smoothing', String(smoothing));
+
+            document.getElementById('heroRadiusOut').textContent = radius + 'px';
+            document.getElementById('heroSmoothOut').textContent = smoothing.toFixed(2).replace(/0$/, '');
+            document.getElementById('heroDemoState').textContent =
+                'Continuous, ' + Math.round(smoothing * 100) + '%';
+
+            // The track's dark portion is a gradient stop, so it has to be told where the thumb is.
+            [heroRadius, heroSmooth].forEach(function (input)
+            {
+                var share = (input.value - input.min) / (input.max - input.min) * 100;
+                input.style.setProperty('--fill', share + '%');
+            });
+
+            // A radius or smoothing change alters the shape and not the box, so nothing observes it.
+            if (window.cornerjs) window.cornerjs.refresh(heroRoot);
+        }
+
+        heroRadius.addEventListener('input', heroShape);
+        heroSmooth.addEventListener('input', heroShape);
+        // The reveal starts once the shape is actually clipped, and the attribute is REMOVED when
+        // it is over: `filter: blur(0)` is still a filter, and one left in place keeps a render
+        // surface and a containing block for absolutely positioned descendants for good.
+        var revealed = false;
+
+        function reveal ()
+        {
+            if (revealed) return;
+
+            revealed = true;
+            heroRoot.dataset.reveal = 'running';
+            setTimeout(function () { delete heroRoot.dataset.reveal; }, 1200);
+        }
+
+        whenReady(function ()
+        {
+            heroShape();
+            heroDemo.dataset.drawn = 'true';
+            reveal();
+        });
+
+        // Never leave the hero blurred out because the module did not arrive.
+        setTimeout(reveal, 1500);
+
+        // The buttons zoom about the middle of the board, since a click on a button carries no
+        // position on the drawing.
+        document.getElementById('zoomIn').addEventListener('click', function () { heroView.step(1.5); });
+        document.getElementById('zoomOut').addEventListener('click', function () { heroView.step(1 / 1.5); });
+    }
+
+    // Defined HERE rather than further down with the tier detection, because both blocks use
+    // it and `var` hoists the declaration without the assignment: the support matrix ran
+    // first, called an undefined `supports`, and its own try/catch turned the TypeError into
+    // a row reading "No". clip-path and corner-shape both reported unsupported in a browser
+    // that has them.
+    var supports = window.CSS && CSS.supports ? CSS.supports.bind(CSS) : function () { return false; };
+
+    // ---- the support matrix, detected rather than tabulated ----
+    //
+    // Feature detection only, and one row per thing the module or this page actually depends
+    // on. `required` marks the two without which nothing is drawn at all; everything else has
+    // a named degradation, which is the useful half of a support table anyway.
+    var SUPPORT = [
+        { name: 'clip-path: path()', role: 'Draws the corner itself',
+          from: ['Chrome 52', 'Safari 13.1', 'Firefox 72'], caniuse: 'css-clip-path',
+          test: function () { return supports('clip-path', 'path("M 0 0 L 1 0 Z")'); },
+          required: true, without: 'No continuous corner. The declared border-radius stands.' },
+        { name: 'ResizeObserver', role: 'Redraws the path when the box changes',
+          from: ['Chrome 64', 'Safari 13.1', 'Firefox 69'], caniuse: 'resizeobserver',
+          test: function () { return 'ResizeObserver' in window; },
+          required: true, without: 'The path becomes a snapshot and drifts on resize.' },
+        { name: 'corner-shape', role: 'Draws the superellipse variants natively',
+          from: ['Chrome 139', 'Safari: not shipped', 'Firefox: not shipped'],
+          test: function () { return supports('corner-shape', 'squircle'); },
+          without: 'corner.js draws them as a clip-path instead.' },
+        { name: 'SVG filters', role: 'The shadow, along the same curve',
+          from: ['Chrome 8', 'Safari 6', 'Firefox 3'], caniuse: 'svg-filters',
+          test: function () { return 'SVGFEMorphologyElement' in window; },
+          without: 'No shadow — a clip removes the element\'s own.' },
+        { name: '@property', role: 'Registered custom properties',
+          from: ['Chrome 85', 'Safari 16.4', 'Firefox 128'],
+          test: function () { return !!(window.CSS && 'registerProperty' in window.CSS); },
+          without: 'Custom properties jump instead of animating.' },
+        { name: ':has()', role: 'Sizing the wrapper the module inserts',
+          from: ['Chrome 105', 'Safari 15.4', 'Firefox 121'], caniuse: 'css-has',
+          test: function () { return supports('selector(:has(*))'); },
+          without: 'The wrapper stays auto-sized and a fixed-size target collapses.' },
+        { name: 'text-wrap: balance', role: 'Headings on this page',
+          from: ['Chrome 130', 'Safari 17.5', 'Firefox 121'], caniuse: 'css-text-wrap-balance',
+          test: function () { return supports('text-wrap', 'balance'); },
+          without: 'Headings wrap normally. Cosmetic.' }
+    ];
+
+    // THE MODULE'S MINIMUM, computed from the rows marked `required` rather than written down: the
+    // highest version per engine across those rows is the floor, and if a requirement changes the
+    // figure follows. Everything else in the table is optional to corner.js -- :has() and @property
+    // are how the PAGE and a consumer stylesheet do their work, not the module.
+    function minimumRequirement(rows)
+    {
+        var floors = {};
+        rows.filter(function (row) { return row.required; }).forEach(function (row)
+        {
+            row.from.forEach(function (entry)
+            {
+                var parts = /^(\D+)\s+([\d.]+)$/.exec(entry);
+                if (!parts) return;
+                var name = parts[1].trim();
+                var version = parts[2].split('.').map(Number);
+                var held = floors[name];
+                if (!held || compare(version, held.parts) > 0)
+                {
+                    floors[name] = { parts: version, text: parts[2] };
+                }
+            });
+        });
+        return Object.keys(floors).map(function (name) { return name + ' ' + floors[name].text; });
+    }
+
+    function compare(a, b)
+    {
+        for (var i = 0; i < Math.max(a.length, b.length); i++)
+        {
+            var diff = (a[i] || 0) - (b[i] || 0);
+            if (diff) return diff;
+        }
+        return 0;
+    }
+
+    var supportBody = document.querySelector('#supportTable tbody');
+    if (supportBody)
+    {
+        SUPPORT.forEach(function (row)
+        {
+            var ok;
+            try { ok = !!row.test(); } catch (e) { ok = false; }
+            var tr = document.createElement('tr');
+            tr.dataset.ok = String(ok);
+            // THREE columns, not five. What a feature is for and what happens without it belong to
+            // the feature, so they sit under its name rather than in columns of their own -- which
+            // also means the table needs no special case on a phone: five columns could only either
+            // scroll sideways or shrink past reading, three fit.
+            tr.innerHTML =
+                '<td class="support-feature">' +
+                    '<code>' + row.name + '</code>' +
+                    (row.required ? ' <span class="req">required</span>' : '') +
+                    (row.caniuse
+                        ? ' <a class="support-link" href="https://caniuse.com/' + row.caniuse +
+                          '" target="_blank" rel="noopener"><span class="link-text">caniuse</span></a>'
+                        : '') +
+                    '<span class="support-role">' + row.role + '</span>' +
+                    '<span class="support-without">Without it: ' + row.without + '</span>' +
+                '</td>' +
+                // ONE LINE PER BROWSER: three versions on one line read as a sentence to be parsed,
+                // and the interesting comparison is down the column rather than across it. The
+                // versions come FIRST because they are the answer to "can I use this at all"; the
+                // live check is the narrower follow-up.
+                '<td class="support-from">' +
+                    (row.from.length
+                        ? row.from.map(function (line) { return '<span>' + line + '</span>'; }).join('')
+                        : '&mdash;') +
+                '</td>' +
+                '<td class="support-state">' + (ok ? 'Yes' : 'No') + '</td>';
+            supportBody.appendChild(tr);
+        });
+    }
+
+    // ---- tiers, measured here rather than claimed ----
+    //
+    // Note what "active" means per row: tier 1 is reported as SUPPORTED, not active,
+    // even where the browser has it -- this page's corners are .corner-continuous,
+    // and corner.js checks that class BEFORE the native early-return, because no
+    // corner-shape value can express the arc-plus-Bezier hybrid. So tier 3 is what
+    // draws here even in Chrome 139+.
+    var state = {
+        native: supports('corner-shape', 'squircle'),
+        houdini: !!(window.CSS && 'paintWorklet' in window.CSS),
+        clip: supports('clip-path', 'path("M 0 0 L 1 0 Z")')
+    };
+
+    // Marks the column that applies here, rather than ranking four techniques. The ranking was
+    // wrong for this module: for the continuous curve there is one technique and no alternative,
+    // and only the superellipse modes have a genuine fallback relationship.
+    var table = document.getElementById('drawTable');
+    if (table)
+    {
+        // NOT `live`: that name is already the live <style> element declared at the top of this
+        // IIFE, and `var` is function-scoped -- reusing it here reassigned the element to a
+        // string, after which `live.textContent = ...` in apply() was a silent no-op on a
+        // primitive. No exception, no rule, and the playground drew every corner at radius 0.
+        var liveColumn = state.native ? 'native' : 'clip';
+        Array.prototype.forEach.call(table.querySelectorAll('th[data-col]'), function (th, index)
+        {
+            var applies = th.dataset.col === liveColumn;
+            th.dataset.live = String(applies);
+            th.textContent = th.textContent.trim() + (applies ? ' — you are here' : '');
+            Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (row)
+            {
+                row.children[index + 1].dataset.live = String(applies);
+            });
+        });
+        var minimumEl = document.getElementById('supportMinimum');
+    if (minimumEl) minimumEl.textContent = minimumRequirement(SUPPORT).join(' · ');
+
+    document.getElementById('metaTier').textContent = state.native
+            ? 'Continuous: clip-path · squircle: native corner-shape'
+            : 'clip-path draws every curve in this browser';
+        document.getElementById('drawVerdict').textContent = state.native
+            ? 'This browser has corner-shape, so a squircle is drawn natively and the continuous ' +
+              'curve still goes through clip-path — both are in use on this page.'
+            : 'This browser has no corner-shape, so every one of the three goes through clip-path.';
+    }
+
+    // No boot call: corner.js finds its own targets. But the module is loaded ASYNC now, so this
+    // inline script can run BEFORE it -- and the playground genuinely needs it, since it reads
+    // values back out of the path that was drawn. Measured when this was a plain call: the live
+    // rule stayed empty and every corner drew at radius 0, because refresh() threw on an
+    // undefined cornerjs. So: draw once when the module is there, whenever that is.
+    function whenReady(fn)
+    {
+        if (window.cornerjs) return fn();
+        var tag = document.querySelector('script[src$="corner.min.js"]');
+        if (tag) tag.addEventListener('load', fn, { once: true });
+        else window.addEventListener('load', fn, { once: true });
+    }
+    whenReady(apply);
+
+    // The stack, because it holds both compared shapes -- panning the drawn one alone would
+    // separate it from the arc behind it.
+    panZoom(stage, stage.querySelector('.preview-stack'), { start: 1 });
+
+    // ---- the mobile menu ----
+    //
+    // One attribute on the header, so the sheet, the burger and the page's own scroll lock are
+    // all CSS. A link closes it because the target is on this page: without that, tapping one
+    // scrolls the document behind a sheet that is still covering it.
+    var header = document.querySelector('.site-header');
+    var navToggle = document.getElementById('navToggle');
+    var navClose = document.getElementById('navClose');
+
+    function setMenu(open)
+    {
+        if (open) header.dataset.menu = 'open';
+        else delete header.dataset.menu;
+        navToggle.setAttribute('aria-expanded', String(open));
+        if (!open) navToggle.focus();
+    }
+
+    navToggle.addEventListener('click', function () { setMenu(header.dataset.menu !== 'open'); });
+    navClose.addEventListener('click', function () { setMenu(false); });
+
+    // ---- the grouped nav ----
+    //
+    // Hover opens a group on a mouse, click and Enter open it for touch and the keyboard, and only
+    // one is ever open. Below the breakpoint the CSS opens all of them inside the sheet, so none of
+    // this runs against anything visible.
+    var groups = Array.prototype.slice.call(document.querySelectorAll('.nav-group'));
+
+    function closeGroups(except)
+    {
+        groups.forEach(function (group)
+        {
+            if (group === except) return;
+            delete group.dataset.open;
+            group.querySelector('.nav-trigger').setAttribute('aria-expanded', 'false');
+        });
+        if (!except) delete document.documentElement.dataset.navOpen;
+    }
+
+    document.getElementById('navScrim').addEventListener('click', function () { closeGroups(null); });
+
+    // Hidden in the sheet, so it should not be reachable there: a button nobody can see is a dead
+    // stop for the keyboard.
+    var sheetQuery = matchMedia('(max-width: 860px)');
+
+    function syncTriggers()
+    {
+        groups.forEach(function (group)
+        {
+            var trigger = group.querySelector('.nav-trigger');
+            var first = group.querySelector('.nav-panel a');
+
+            // In the sheet the name IS the destination, so it announces itself as a link rather
+            // than as a control that expands something.
+            if (sheetQuery.matches)
+            {
+                trigger.removeAttribute('aria-expanded');
+                trigger.removeAttribute('aria-controls');
+                if (first) trigger.title = 'Go to ' + first.textContent.trim();
+            }
+            else
+            {
+                trigger.setAttribute('aria-expanded', String(Boolean(group.dataset.open)));
+                trigger.setAttribute('aria-controls', trigger.dataset.controls);
+                trigger.removeAttribute('title');
+            }
+        });
+    }
+
+    sheetQuery.addEventListener('change', syncTriggers);
+
+    groups.forEach(function (group)
+    {
+        var trigger = group.querySelector('.nav-trigger');
+
+        var panel = group.querySelector('.nav-panel');
+        var inner = panel.querySelector('.nav-panel-inner');
+
+        function open(state)
+        {
+            // CSS cannot transition to `auto`, so the height it grows to is measured here. Read
+            // every time rather than cached: the content reflows with the viewport.
+            panel.style.height = state ? inner.getBoundingClientRect().height + 'px' : '0px';
+            if (state) group.dataset.open = 'true';
+            else delete group.dataset.open;
+            trigger.setAttribute('aria-expanded', String(state));
+            if (state) closeGroups(group);
+            // One attribute on <html>, so the scrim is CSS and cannot fall out of step.
+            if (state) document.documentElement.dataset.navOpen = 'true';
+            else if (!document.querySelector('.nav-group[data-open]')) delete document.documentElement.dataset.navOpen;
+        }
+
+        trigger.dataset.controls = trigger.getAttribute('aria-controls') || '';
+
+        trigger.addEventListener('click', function ()
+        {
+            // In the sheet: jump to the group's first entry and close the sheet behind it.
+            if (sheetQuery.matches)
+            {
+                var first = group.querySelector('.nav-panel a');
+                setMenu(false);
+                if (first) scrollToId(first.getAttribute('href').slice(1));
+                return;
+            }
+
+            open(!group.dataset.open);
+        });
+        // Entering a group opens it and closes the others; LEAVING is handled on the header below,
+        // never here: the panel sits at the header's bottom edge, so the pointer has to cross the
+        // header's own padding to reach it -- a strip that belongs to no group. Watching the group
+        // for pointerleave closed the panel in that gap, before the pointer ever arrived.
+        group.addEventListener('pointerenter', function (event)
+        {
+            // Nothing to open in the sheet: the panels are hidden there and the group name is a
+            // plain jump, so hover has no business changing state.
+            if (sheetQuery.matches || event.pointerType !== 'mouse') return;
+
+            open(true);
+        });
+        group.addEventListener('focusout', function (event)
+        {
+            if (!group.contains(event.relatedTarget)) open(false);
+        });
+        Array.prototype.forEach.call(group.querySelectorAll('a'), function (link)
+        {
+            link.addEventListener('click', function () { open(false); });
+        });
+    });
+
+    syncTriggers();
+
+    // Entering anything in the header that is NOT a group closes what is open. Without this,
+    // moving from Try back to Features left the panel standing: Features is a plain link, so no
+    // group handler fires, and the pointer never leaves the header either.
+    Array.prototype.forEach.call(
+        document.querySelectorAll('.site-nav > .nav-link, .site-github, .brand'), function (item)
+        {
+            item.addEventListener('pointerenter', function (event)
+            {
+                if (sheetQuery.matches || event.pointerType !== 'mouse') return;
+
+                closeGroups(null);
+            });
+        });
+
+    // The panel is a DOM child of the header, so the pointer is still "inside" it while hovering
+    // the panel -- which is exactly the containment this needs.
+    header.addEventListener('pointerleave', function (event)
+    {
+        if (sheetQuery.matches || event.pointerType !== 'mouse') return;
+
+        closeGroups(null);
+    });
+
+    document.addEventListener('keydown', function (event)
+    {
+        if (event.key === 'Escape') closeGroups(null);
+    });
+
+    // Group names and links together, in DOM order: on a phone the sheet shows the triggers, on a
+    // desktop the panels' links, and the same index drives the stagger for whichever is visible.
+    Array.prototype.forEach.call(
+        document.querySelectorAll('#siteNav .nav-trigger, #siteNav a'),
+        function (item, index)
+        {
+            item.style.setProperty('--i', String(index));
+            item.addEventListener('click', function () { setMenu(false); });
+        });
+
+    document.addEventListener('keydown', function (event)
+    {
+        if (event.key === 'Escape' && header.dataset.menu === 'open') setMenu(false);
+    });
+
+    var footerYear = document.getElementById('footerYear');
+    if (footerYear) footerYear.textContent = String(new Date().getFullYear());
+
+
+})();
+</script>
+<!-- The live framework checks. A module, so top-level await and dynamic import are available; it
+     runs after everything else and touches nothing but its own mounts. -->
+<script type="module">
+const CARD_STYLE = 'width:100%;height:100%;border-radius:22px;box-shadow:0 10px 20px rgba(0,0,0,.14);' +
+    'background:linear-gradient(to right,#0f172a,#334155);display:grid;place-items:center;' +
+    'color:rgba(255,255,255,.92);font:600 13px var(--font-body)'
+
+function frame (label, source)
+{
+    const mount = document.createElement('div')
+    mount.className = 'framework-mount'
+    mount.innerHTML = '<span class="framework-mount-label">' + label + '</span>'
+
+    const stage = document.createElement('div')
+    stage.className = 'framework-stage'
+    mount.append(stage)
+
+    // The code shown is the code that ran: printed out of the function object itself, so it cannot
+    // drift from what the browser executed the way a copied snippet can.
+    const code = document.createElement('details')
+    code.className = 'framework-source'
+    code.innerHTML = '<summary>Source that ran</summary><pre><code></code></pre>'
+    code.querySelector('code').textContent = source
+    mount.append(code)
+
+    document.getElementById('frameworkMounts').append(mount)
+
+    return stage
+}
+
+// What every check reports. `reused` is the one that matters for a framework: false means the
+// module re-parented the element and the reconciler is now holding the wrong parent.
+function inspect (root)
+{
+    const card = root.querySelector('[data-corner-js]')
+
+    if (!card) return null
+
+    const wrapper = card.parentElement
+
+    return {
+        drawn: Boolean(card.style.clipPath),
+        // The card's parent has to be the element the framework itself rendered. Anything else
+        // means the module inserted a wrapper between them, which is what breaks a reconciler.
+        reused: wrapper === root,
+        svgs: root.querySelectorAll('svg').length
+    }
+}
+
+// Widens the mounted wrapper and waits for the path to be rewritten by the element's own
+// ResizeObserver. Counting frames keeps the verdict honest: browsers deliver ResizeObserver
+// callbacks during rendering, and a hidden tab renders none -- "no" without frames would blame
+// the library for the throttling. null means "could not measure".
+async function redraws_on_resize (root)
+{
+    const card = root?.querySelector('[data-corner-js]')
+
+    if (!card) return false
+
+    const before = card.style.clipPath
+    const restore = root.style.width
+    let frames = 0
+    const count = () => { frames += 1; requestAnimationFrame(count) }
+
+    requestAnimationFrame(count)
+    root.style.width = '176px'
+
+    const changed = await new Promise(resolve =>
+    {
+        const observer = new MutationObserver(() =>
+        {
+            if (card.style.clipPath === before) return
+
+            observer.disconnect()
+            resolve(true)
+        })
+
+        observer.observe(card, { attributes: true, attributeFilter: ['style'] })
+        setTimeout(() => { observer.disconnect(); resolve(frames >= 2 ? false : null) }, 800)
+    })
+
+    root.style.width = restore
+
+    return changed
+}
+
+async function react (stage)
+{
+    const [React, { createRoot }] = await Promise.all([
+        import('https://esm.sh/react@18.3.1'),
+        import('https://esm.sh/react-dom@18.3.1/client')
+    ])
+    const { createElement: h, useEffect, useRef } = React
+    let measured = null
+
+    function Card ()
+    {
+        const ref = useRef(null)
+
+        useEffect(() => { window.cornerjs.apply(ref.current); measured = inspect(ref.current) }, [])
+
+        return h('div', { ref, 'data-corner-shadow-wrap': '', style: { position: 'relative', width: 120, height: 84 } },
+            h('div', { 'data-corner-js': '', className: 'framework-card' }, 'React'))
+    }
+
+    const root = createRoot(stage)
+    root.render(h(Card))
+    await new Promise(resolve => setTimeout(resolve, 120))
+
+    return { version: React.version, measured, unmount: () => root.unmount() }
+}
+
+async function vue (stage)
+{
+    const Vue = await import('https://esm.sh/vue@3.5.13')
+    const { createApp, h, onMounted, ref } = Vue
+    let measured = null
+
+    const app = createApp({
+        setup ()
+        {
+            const root = ref(null)
+
+            onMounted(() => { window.cornerjs.apply(root.value); measured = inspect(root.value) })
+
+            return () => h('div', { ref: root, 'data-corner-shadow-wrap': '', style: 'position:relative;width:120px;height:84px' },
+                [h('div', { 'data-corner-js': '', class: 'framework-card' }, 'Vue')])
+        }
+    })
+    app.mount(stage)
+    await new Promise(resolve => setTimeout(resolve, 120))
+
+    return { version: Vue.version, measured, unmount: () => app.unmount() }
+}
+
+async function solid (stage)
+{
+    const [{ render }, { onMount }, { default: html }] = await Promise.all([
+        import('https://esm.sh/solid-js@1.9.3/web'),
+        import('https://esm.sh/solid-js@1.9.3'),
+        import('https://esm.sh/solid-js@1.9.3/html')
+    ])
+    let measured = null
+    let root = null
+    const dispose = render(() =>
+    {
+        onMount(() => { window.cornerjs.apply(root); measured = inspect(root) })
+
+        return html`
+            <div data-corner-shadow-wrap style="position:relative;width:120px;height:84px"
+                 ref=${element => { root = element }}>
+                <div data-corner-js class="framework-card">Solid</div>
+            </div>`
+    }, stage)
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    return { version: '1.9.3', measured, unmount: dispose }
+}
+
+async function turbo (stage)
+{
+    const Turbo = await import('https://esm.sh/@hotwired/turbo@8.0.12')
+
+    // Streams only. Turbo intercepts every link and form on import, which would take over a
+    // documentation page it was never asked to drive.
+    Turbo.session.drive = false
+
+    stage.id = 'turboTarget'
+    Turbo.renderStreamMessage(
+        '<turbo-stream action="append" target="turboTarget"><template>' +
+        '<div data-corner-shadow-wrap style="position:relative;width:120px;height:84px">' +
+        '<div data-corner-js class="framework-card">Turbo</div></div>' +
+        '</template></turbo-stream>')
+    await new Promise(resolve => setTimeout(resolve, 160))
+    window.cornerjs.apply(stage)
+    // The appended fragment carries its own wrapper, so that is the root to measure against.
+    const measured = inspect(stage.querySelector('[data-corner-shadow-wrap]') ?? stage)
+
+    return {
+        version: '8.x',
+        measured,
+        unmount: () => Turbo.renderStreamMessage(
+            '<turbo-stream action="update" target="turboTarget"><template></template></turbo-stream>')
+    }
+}
+
+async function svelte (stage)
+{
+    // The component was compiled by bin/build.js from html/fixtures/Card.svelte -- the same file
+    // the Svelte tab shows. Its own imports point at the CDN, so this needs no resolver.
+    const [{ default: Card }, { mount, unmount }] = await Promise.all([
+        import('../build/svelte-card.js'),
+        import('https://esm.sh/svelte@5.56.8')
+    ])
+    const instance = mount(Card, { target: stage })
+    await new Promise(resolve => setTimeout(resolve, 160))
+
+    return {
+        version: '5.56.8',
+        measured: inspect(stage.querySelector('[data-corner-shadow-wrap]') ?? stage),
+        unmount: () => unmount(instance)
+    }
+}
+
+const CHECKS = [['React', react], ['Vue', vue], ['Svelte', svelte], ['Solid', solid], ['Turbo', turbo]]
+const rows = document.getElementById('frameworkRows')
+const note = document.getElementById('frameworkNote')
+let failures = 0
+
+function cell (ok, text)
+{
+    return '<td class="' + (ok ? 'check-pass' : 'check-fail') + '">' + text + '</td>'
+}
+
+for (const [label, check] of CHECKS)
+{
+    const stage = frame(label, check.toString())
+    const row = document.createElement('tr')
+    rows.append(row)
+
+    try
+    {
+        const { version, measured, unmount } = await check(stage)
+        const resized = await redraws_on_resize(stage.querySelector('[data-corner-shadow-wrap]'))
+        let unmounted = 'clean'
+
+        try { unmount() }
+        catch (error) { unmounted = error.name; failures += 1 }
+
+        // Mounted again and left in place: the row says it works, the card shows it.
+        try { await check(stage) }
+        catch (error) { unmounted = unmounted + ', remount ' + error.name; failures += 1 }
+
+        if (!measured || !measured.drawn || !measured.reused || resized === false) failures += 1
+
+        row.innerHTML = '<td>' + label + '</td><td>' + version + '</td>'
+            + (measured
+                ? cell(measured.drawn, measured.drawn ? 'yes' : 'no')
+                  + cell(measured.reused, measured.reused ? 'yes' : 'no')
+                : '<td class="check-fail" colspan="2">the check never ran</td>')
+            + (resized === null
+                ? '<td title="This tab rendered no frames during the check">&ndash;</td>'
+                : cell(resized, resized ? 'yes' : 'no'))
+            + cell(unmounted === 'clean', unmounted)
+    }
+    catch (error)
+    {
+        failures += 1
+        row.innerHTML = '<td>' + label + '</td><td>&ndash;</td>'
+            + '<td class="check-fail" colspan="4">' + error.name + ': ' + error.message.slice(0, 60) + '</td>'
+    }
+}
+
+note.textContent = failures
+    ? failures + ' of ' + CHECKS.length + ' checks did not pass \u2014 the claim above is broken somewhere.'
+    : 'All ' + CHECKS.length + ' mounted, drew, reused the wrapper, redrew on resize and unmounted cleanly.'
+note.className = failures ? 'check-fail' : 'check-pass'
+</script>
+
+</body>
+</html>

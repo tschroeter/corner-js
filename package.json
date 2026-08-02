@@ -1,0 +1,51 @@
+{
+    "name": "corner.js",
+    "version": "0.2.0",
+    "description": "Draws continuous (Apple-like) and superellipse corners as a clip-path, wherever CSS corner-shape is missing.",
+    "license": "MIT",
+    "author": "Thomas Schr\u00f6ter",
+    "homepage": "https://tschroeter.com/corner-js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/tschroeter/corner-js.git"
+    },
+    "keywords": [
+        "squircle",
+        "superellipse",
+        "corner-shape",
+        "continuous-curvature",
+        "border-radius",
+        "clip-path",
+        "css",
+        "vanilla-js"
+    ],
+    "type": "module",
+    "main": "src/corner.js",
+    "module": "src/corner.js",
+    "unpkg": "build/corner.min.js",
+    "jsdelivr": "build/corner.min.js",
+    "exports": {
+        ".": "./src/corner.js",
+        "./min": "./build/corner.min.js",
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "src/corner.js",
+        "build/corner.min.js",
+        "README.md",
+        "LICENSE"
+    ],
+    "sideEffects": true,
+    "scripts": {
+        "lint": "bun bin/build.js --check",
+        "faq": "bun bin/faq-schema.js",
+        "build": "bun bin/build.js",
+        "test": "bun test/paths.js",
+        "prepublishOnly": "bun bin/build.js",
+        "deploy": "bun bin/deploy.js"
+    },
+    "devDependencies": {
+        "google-closure-compiler": "latest",
+        "svelte": "^5.56.8"
+    }
+}
