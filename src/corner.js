@@ -19,11 +19,28 @@ const CORNER_SHAPE_PROPERTIES = [
     'corner-bottom-right-shape', 'corner-bottom-left-shape'
 ]
 
-// 2 is the circle; past 20 it is a rectangle with a rounding error.
-const MIN_EXPONENT = 2
+// 2 is the circle, 1 is a straight chord and below that the corner turns concave; past 20 it is a
+// rectangle with a rounding error. The floor is notch territory, 2^-4.3.
+const MIN_EXPONENT = 0.05
 const MAX_EXPONENT = 20
 // What `squircle` means, in CSS and here: the Lame curve of exponent 4.
 const DEFAULT_EXPONENT = 4
+
+// CSS names six corners, and each is an alias for one superellipse parameter. Verified against the
+// property itself rather than the prose: in Chrome 150 superellipse(-1) computes to `scoop`,
+// superellipse(0) to `bevel`, superellipse(1) to `round`, superellipse(2) to `squircle`, and the two
+// infinities to `notch` and `square`. The exponent is 2^k, so k = 0 is exponent 1 -- the point where
+// the curve is a straight line between the tangent points.
+//
+// `round` draws nothing: border-radius already is that corner.
+const SHAPE_KEYWORDS = {
+    notch: MIN_EXPONENT,
+    scoop: 0.5,
+    bevel: 1,
+    round: 'none',
+    squircle: DEFAULT_EXPONENT,
+    square: MAX_EXPONENT
+}
 
 const POINTS_PER_CORNER = 20
 const QUARTER_TURN = Math.PI / 2
@@ -762,12 +779,20 @@ function mode_from_shape (shape)
     // thing is worse than leaving the corners to border-radius.
     if (shape === 'mixed') return 'none'
     if (shape === 'continuous') return 'continuous'
-    if (shape === 'round') return 'none'
-    if (shape === 'squircle') return DEFAULT_EXPONENT
 
-    const power = /^superellipse\(\s*(-?[\d.]+)\s*\)$/.exec(shape)
+    if (shape in SHAPE_KEYWORDS) return SHAPE_KEYWORDS[shape]
 
-    if (power) return clamp(2 ** parseFloat(power[1]), MIN_EXPONENT, MAX_EXPONENT)
+    const power = /^superellipse\(\s*(-?(?:[\d.]+|infinity))\s*\)$/.exec(shape)
+
+    if (power)
+    {
+        const k = power[1]
+
+        if (k === 'infinity') return MAX_EXPONENT
+        if (k === '-infinity') return MIN_EXPONENT
+
+        return clamp(2 ** parseFloat(k), MIN_EXPONENT, MAX_EXPONENT)
+    }
 
     return 'continuous'
 }

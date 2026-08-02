@@ -46,7 +46,23 @@ are read from your CSS and redrawn along the curve.
 |---|---|
 | *no value*, or `auto` | takes it from CSS: where the browser has `corner-shape` it has already drawn what you declared and this stays out of the way; where it has not, the continuous corner |
 | `continuous` | arc with Bézier shoulders, smoothing `0.6` — always drawn, since no `corner-shape` value expresses it |
-| `superellipse-<n>` | superellipse, exponent `n`, from 2 to 20. Native `corner-shape` draws it where that exists |
+| `superellipse-<n>` | superellipse, exponent `n`, from 0.05 to 20. Native `corner-shape` draws it where that exists |
+
+Under `auto`, the six corners CSS names are all understood, each an alias for one superellipse
+parameter. The exponent is 2^k, so k = 0 is exponent 1 — the point where the curve is a straight
+line between the tangent points, and below which it turns concave:
+
+| `corner-shape` | ≡ | drawn as |
+|---|---|---|
+| `notch` | `superellipse(-infinity)` | exponent 0.05, concave |
+| `scoop` | `superellipse(-1)` | exponent 0.5, concave |
+| `bevel` | `superellipse(0)` | exponent 1, a straight chord |
+| `round` | `superellipse(1)` | nothing — `border-radius` already is that corner |
+| `squircle` | `superellipse(2)` | exponent 4 |
+| `square` | `superellipse(infinity)` | exponent 20 |
+
+Read back out of the property in Chrome rather than off the specification, and each one verified to
+produce a distinct path with `corner-shape` support switched off.
 
 The per-corner longhands are read too. If `corner-top-left-shape` and its three siblings agree, that
 shape is used; if they disagree, the corners are left to CSS — one path is drawn per element, so a

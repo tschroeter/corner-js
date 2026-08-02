@@ -129,7 +129,9 @@ equal('mode: explicit auto', corner.mode_for(element({ 'data-corner-js': 'auto' 
 equal('mode: unrecognised value defers too', corner.mode_for(element({ 'data-corner-js': 'squircle' })), 'auto')
 equal('mode: continuous', corner.mode_for(element({ 'data-corner-js': 'continuous' })), 'continuous')
 equal('mode: exponent', corner.mode_for(element({ 'data-corner-js': 'superellipse-7.5' })), 7.5)
-equal('mode: exponent clamped low', corner.mode_for(element({ 'data-corner-js': 'superellipse-1' })), 2)
+// 1 is not clamped any more: it is the straight chord, the same corner CSS calls `bevel`.
+equal('mode: exponent 1 is the bevel, not a floor', corner.mode_for(element({ 'data-corner-js': 'superellipse-1' })), 1)
+equal('mode: exponent clamped low', corner.mode_for(element({ 'data-corner-js': 'superellipse-0.001' })), 0.05)
 equal('mode: exponent clamped high', corner.mode_for(element({ 'data-corner-js': 'superellipse-99' })), 20)
 equal('mode: nonsense', corner.mode_for(element({ 'data-corner-js': 'nonsense' })), 'auto')
 
@@ -144,7 +146,17 @@ equal('shape: superellipse(2)', corner.mode_from_shape('superellipse(2)'), 4)
 equal('shape: superellipse(1)', corner.mode_from_shape('superellipse(1)'), 2)
 equal('shape: superellipse(3)', corner.mode_from_shape('superellipse(3)'), 8)
 equal('shape: superellipse clamped high', corner.mode_from_shape('superellipse(9)'), 20)
-equal('shape: superellipse clamped low', corner.mode_from_shape('superellipse(-1)'), 2)
+
+// THE SIX KEYWORDS CSS DEFINES, each an alias for one parameter -- read back out of the property in
+// Chrome 150, not out of the prose. k = 0 is exponent 1, where the curve is a straight chord.
+equal('shape: bevel is the straight chord', corner.mode_from_shape('bevel'), 1)
+equal('shape: superellipse(0) is bevel too', corner.mode_from_shape('superellipse(0)'), 1)
+equal('shape: scoop is concave', corner.mode_from_shape('scoop'), 0.5)
+equal('shape: superellipse(-1) is scoop', corner.mode_from_shape('superellipse(-1)'), 0.5)
+equal('shape: notch is the concave extreme', corner.mode_from_shape('notch'), 0.05)
+equal('shape: superellipse(-infinity) is notch', corner.mode_from_shape('superellipse(-infinity)'), 0.05)
+equal('shape: square is the convex extreme', corner.mode_from_shape('square'), 20)
+equal('shape: superellipse(infinity) is square', corner.mode_from_shape('superellipse(infinity)'), 20)
 equal('shape: unrecognised still draws', corner.mode_from_shape('wobbly'), 'continuous')
 equal('shape: a mix of constructions draws nothing', corner.mode_from_shape('mixed'), 'none')
 
