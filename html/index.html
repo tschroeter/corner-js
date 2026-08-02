@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=a0490504">
+<link rel="stylesheet" href="page.css?v=ab254803">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -2120,6 +2120,30 @@ useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])</code></pre>
         });
         head.appendChild(button);
     });
+
+    // ---- the artboard starts level with the paragraph, not with the heading ----
+    //
+    // Only the playground needs this. The other seven sections open their right column with a
+    // standfirst, so the two sides line up by construction -- but this one opens with a drawing while
+    // its paragraph sits on the left, and there is no CSS that can offset one column by the height of
+    // part of another. Subgrid can, and costs the sticky: the head would have to span both rows, which
+    // makes its box as tall as the container and leaves the heading nothing to stay behind.
+    //
+    // The number is the LEDE's own position inside the head, not the title's height -- a margin sits
+    // between them -- and a ResizeObserver keeps it right when the heading rewraps.
+    (function ()
+    {
+        var grid = document.querySelector('.playground');
+        var head = grid && grid.querySelector('.playground-head');
+        var lede = head && head.querySelector('.playground-lede');
+
+        if (!lede) return;
+
+        function align () { grid.style.setProperty('--lede-offset', lede.offsetTop + 'px'); }
+
+        align();
+        if (typeof ResizeObserver !== 'undefined') new ResizeObserver(align).observe(head);
+    }());
 
     // ---- TABS, but only where the layout has collapsed to one column ----
     //
