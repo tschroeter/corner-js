@@ -648,11 +648,11 @@ body::before {
     z-index: 90;
 }
 
-section { padding-block: var(--spacing-8); }
+section { padding-block: calc(var(--spacing-8) * 2); }
 
 /* A tinted band needs more room than a plain one: the same padding that looks generous against the
    page reads as a tight box once there is an edge above and below it. */
-section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 1.9); }
+section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
 
 .section-head { max-width: 62ch; margin-bottom: var(--spacing-6); }
 /* :not(.kicker), because `.section-head p` outranks `.kicker` on specificity and was silently
@@ -880,7 +880,20 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 1.9); }
    Sticky needs a container taller than the pinned column to travel in. It had none when the artboard
    and the controls shared one side: both columns measured ~520px against a 523px grid, 19 pixels of
    travel, and the column scrolled away with the section. Measured, not assumed. */
+/* THREE CELLS, TWO ROWS. The kicker and the heading own the first row alone, so the second row --
+   the lede beside the artboard -- begins at the same line on both sides. The alternative was a
+   measured top margin on the right column, which is wrong again the moment the heading wraps. */
+.playground-title {
+    grid-column: 1;
+    margin-bottom: 0;
+}
+
+.playground-body { grid-column: 2; grid-row: 2; }
+
+.playground-lede { margin: 0; color: var(--fg-muted); text-wrap: pretty; }
+
 .playground-head {
+    grid-column: 1;
     position: sticky;
     top: calc(var(--header-height) + var(--spacing-4));
     align-self: start;
@@ -895,14 +908,13 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 1.9); }
     gap: var(--spacing-5);
 }
 
-/* The heading no longer spans the section, so it stops reserving width it does not use. */
-.playground-head .section-head { margin-bottom: 0; max-width: none; }
-
 @media (max-width: 860px) {
     .playground { grid-template-columns: minmax(0, 1fr); }
     /* One column: the artboard sits ABOVE the controls in flow, so pinning either of them would
        cover the other as you scroll down to reach it. */
     .playground-head { position: static; }
+    .playground-title,
+    .playground-body { grid-column: auto; grid-row: auto; }
 }
 
 .panel {
@@ -2163,19 +2175,16 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 
 /* Three columns at most: five mounts in one wrapped flex row left a ragged tail, and the cards are
    all the same size, so a grid keeps them in line without any of them stretching. */
+/* A row of sources now that the cards are off screen, not a gallery of them: five labelled
+   disclosures wrap as they fit, and the grid that framed the cards has nothing left to frame. */
 .framework-mounts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
-    gap: var(--spacing-5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-3) var(--spacing-5);
     margin: var(--spacing-5) 0;
-    justify-items: center;
 }
 
-@media (min-width: 700px) {
-    .framework-mounts { grid-template-columns: repeat(3, 1fr); }
-}
-
-.framework-mount { display: flex; flex-direction: column; gap: 8px; }
+.framework-mount { display: flex; align-items: baseline; gap: 8px; }
 
 .framework-mount-label {
     font-size: var(--text-size-small);
@@ -2186,7 +2195,17 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 }
 
 /* Each framework mounts into its own stage, so one failing to load cannot take the others with it. */
-.framework-stage { width: 120px; height: 84px; }
+/* OUT OF VIEW, NOT OUT OF THE LAYOUT. The card is the thing being measured -- mounted for real,
+   drawn, resized and unmounted -- so it keeps a box; display: none would give it a zero rect and the
+   module would refuse to draw, which would break the very check the table reports. What stays on
+   screen is the result and the source that produced it. */
+.framework-stage {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 120px;
+    height: 84px;
+}
 
 .framework-card {
     display: grid;

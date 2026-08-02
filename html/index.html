@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=259cd6b1">
+<link rel="stylesheet" href="page.css?v=057f5896">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -293,18 +293,17 @@
 
 <section id="playground">
     <div class="wrap playground">
+            <div class="playground-title section-head">
+                <p class="kicker">Playground</p>
+                <h2>Playground</h2>
+            </div>
+
             <div class="playground-head">
-                <div class="section-head">
-            <p class="kicker">Playground</p>
-            <h2>Playground</h2>
-            <p>
-                The controls write the CSS below and call <code>refresh</code>. The snippet is what
-                ran &mdash; and the size appears in it twice on purpose: where corner.js draws, it
-                wraps the element and writes <code>width/height: 100%</code> onto it, so the real
-                size has to sit on the wrapper. Where the browser draws, there is no wrapper and
-                only the rule on the element applies.
-            </p>
-        </div>
+                <p class="playground-lede">
+                    The controls write the CSS below and call <code>refresh</code>. The snippet is
+                    what ran, so it is also the answer to what the module touched: a shadow or a
+                    border puts the element in a wrapper, and nothing else does.
+                </p>
 
                 <div class="panel">
                 <label class="control">
