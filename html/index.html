@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=c2584072">
+<link rel="stylesheet" href="page.css?v=36c6dc70">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -299,11 +299,6 @@
                     <h2>Playground</h2>
                 </div>
 
-                <p class="playground-lede">
-                    The controls write the CSS below and call <code>refresh</code>. The snippet is
-                    what ran, so it is also the answer to what the module touched: a shadow or a
-                    border puts the element in a wrapper, and nothing else does.
-                </p>
 
                 <div class="panel">
                 <label class="control">
@@ -443,6 +438,11 @@
             </div>
 
             <div class="playground-body">
+                <p class="standfirst">
+                    The controls write the CSS below and call <code>refresh</code>. The snippet is
+                    what ran, so it is also the answer to what the module touched: a shadow or a
+                    border puts the element in a wrapper, and nothing else does.
+                </p>
                 <!-- A HOLDER around the artboard carries the sticky, not the column: the column is
                      taller than the viewport now that the code panels do not scroll inside
                      themselves, and a sticky box taller than the viewport leaves the screen before
@@ -604,13 +604,13 @@
             <p class="kicker">Using it</p>
             <h2>Integration</h2>
             </div>
-            <p>
-                The shape is declared in markup, so whatever renders the markup is enough &mdash;
-                your framework included. On a plain page that is the entire integration.
-            </p>
         </div>
 
         <div class="use-column">
+            <p class="standfirst">
+                The shape is declared in markup, so whatever renders the markup is enough &mdash;
+                your framework included. On a plain page that is the entire integration.
+            </p>
         <div class="code">
             <div class="code-head"><span>Plain HTML &mdash; and Turbo, htmx, Astro, any server render</span></div>
             <pre><code>&lt;script async src="corner.min.js"&gt;&lt;/script&gt;
@@ -873,13 +873,13 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             <p class="kicker">What it costs</p>
             <h2>Limitations</h2>
             </div>
-            <p>
-                Most of these are what <code>clip-path</code> does, not choices &mdash; anything
-                that clips inherits them.
-            </p>
         </div>
 
         <div class="use-column">
+            <p class="standfirst">
+                Most of these are what <code>clip-path</code> does, not choices &mdash; anything
+                that clips inherits them.
+            </p>
 
         <div class="prose">
             <ul>
@@ -955,15 +955,15 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             <p class="kicker">What it needs</p>
             <h2>Browser support</h2>
             </div>
-            <p>
+        </div>
+
+        <div class="use-column">
+            <p class="standfirst">
                 One row per feature, with the version it landed in and a live test of the browser
                 you are reading this in. Two are marked <strong>required</strong>: without either,
                 no corner is drawn and your <code>border-radius</code> stands. The rest each lose
                 one thing, named in the row.
             </p>
-        </div>
-
-        <div class="use-column">
 
         <div class="table-scroll">
             <table class="support-table" id="supportTable">
@@ -1003,14 +1003,14 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             <p class="kicker">How it is drawn</p>
             <h2>What draws which curve</h2>
             </div>
-            <p>
+        </div>
+
+        <div class="use-column">
+            <p class="standfirst">
                 Not a hierarchy to descend. For the continuous curve there is exactly one technique
                 and no alternative; a real fallback relationship exists only for the two
                 superellipse modes. The column that applies to you is marked.
             </p>
-        </div>
-
-        <div class="use-column">
 
         <div class="table-scroll">
             <table id="drawTable">
@@ -1100,13 +1100,13 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             <p class="kicker">The curve itself</p>
             <h2>The shape</h2>
             </div>
-            <p>
-                What curvature continuity is, which two families have it, and why Figma needed a
-                construction with a parameter rather than one exponent.
-            </p>
         </div>
 
         <div class="use-column">
+            <p class="standfirst">
+                What curvature continuity is, which two families have it, and why Figma needed a
+                construction with a parameter rather than one exponent.
+            </p>
 
         <div class="prose">
             <p>
@@ -1214,14 +1214,14 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             <p class="kicker">Along the same path</p>
             <h2>The shadow</h2>
             </div>
-            <p>
+        </div>
+
+        <div class="use-column">
+            <p class="standfirst">
                 <code>clip-path</code> clips away <code>box-shadow</code> on the same element, and
                 <code>filter: drop-shadow</code> with it. The shadow therefore cannot live on the
                 clipped element.
             </p>
-        </div>
-
-        <div class="use-column">
 
         <div class="prose">
             <p>
@@ -1287,14 +1287,14 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             <p class="kicker">History</p>
             <h2>Neither circle nor rectangle</h2>
             </div>
-            <p>
+        </div>
+
+        <div class="prose">
+            <p class="standfirst">
                 Not Apple, not Figma, not corner.js. The shape is two centuries old,
                 the word is sixty, and the reason anyone cares about curvature continuity comes from
                 car bodies rather than from screens.
             </p>
-        </div>
-
-        <div class="prose">
             <ul>
                 <li id="lame-1818">
                     <strong>1818 &mdash; Gabriel Lamé.</strong> The curve itself: raise the exponent
@@ -2102,33 +2102,6 @@ useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])</code></pre>
         });
         head.appendChild(button);
     });
-
-    // ---- the right column starts at the lede, while the head stays pinned ----
-    //
-    // CSS can have one or the other, not both: borrowing the grid's second row with subgrid needs the
-    // head to span both rows, and an item spanning its container is as tall as the container -- sticky
-    // then has no travel and the heading scrolls away. Measured, so the number is right even after a
-    // heading rewraps, and re-measured when it does.
-    Array.prototype.forEach.call(
-        document.querySelectorAll('.history-grid, .playground'), function (grid)
-        {
-            var title = grid.querySelector('.section-title');
-            var head = grid.querySelector('.history-head, .playground-head');
-            var lede = head && head.querySelector(':scope > p');
-
-            if (!title || !lede) return;
-
-            function align ()
-            {
-                // The LEDE's own position inside the head, not the title's height: between the two
-                // sits a margin -- 12px in these sections, a 20px flex gap in the playground -- and
-                // measuring the title alone left the right column exactly that far too high.
-                grid.style.setProperty('--title-offset', lede.offsetTop + 'px');
-            }
-
-            align();
-            if (typeof ResizeObserver !== 'undefined') new ResizeObserver(align).observe(title);
-        });
 
     // ---- TABS, but only where the layout has collapsed to one column ----
     //

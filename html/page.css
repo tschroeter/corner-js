@@ -51,8 +51,15 @@
     /* Reading copy: prose, list items, features, FAQ answers. One token, because the three
        separate clamps this replaces had already drifted apart -- lists were left on the body size
        while the paragraphs beside them were a step larger. */
-    --text-size-reading: clamp(17px, 1.3vw, 19px);
+    /* 15px, measured against linear.app's own body copy at 15/24 with -0.011em -- ours was 17 to 19,
+       which reads a size heavier beside the same headings. The standfirst below carries the step up
+       that the reading size used to be doing. */
+    --text-size-reading: clamp(15px, 1.1vw, 16px);
     --leading-reading: 1.6;
+    --tracking-reading: -0.011em;
+    /* The paragraph that opens a section: one step of hierarchy between the heading and the copy,
+       set brighter. 21px against their 24 at a wider viewport. */
+    --text-size-standfirst: clamp(19px, 1.6vw, 22px);
     --text-size-label: 14px;
     --text-size-small: 12px;
     --text-size-detail: 13px;
@@ -660,6 +667,7 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
 .section-head p:not(.kicker) {
     margin-top: var(--spacing-3);
     font-size: var(--text-size-reading);
+    letter-spacing: var(--tracking-reading);
     line-height: var(--leading-reading);
     color: var(--fg-muted);
 }
@@ -679,6 +687,7 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
     margin-top: var(--spacing-3);
     margin-bottom: var(--spacing-6);
     font-size: var(--text-size-reading);
+    letter-spacing: var(--tracking-reading);
     line-height: var(--leading-reading);
     color: var(--fg-muted);
 }
@@ -860,6 +869,18 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
 }
 
 .pill strong { color: var(--fg-body); font-weight: 600; }
+
+/* THE STANDFIRST. Brighter and a step larger than the copy under it: the heading states the subject,
+   this states the point, the paragraphs carry the detail. */
+.standfirst {
+    margin: 0 0 var(--spacing-6);
+    max-width: 46ch;
+    font-size: var(--text-size-standfirst);
+    line-height: 1.35;
+    letter-spacing: -0.012em;
+    color: var(--fg-body);
+    text-wrap: pretty;
+}
 
 /* ---------- playground ---------- */
 
@@ -1223,22 +1244,14 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
 }
 
 
-/* THE RIGHT COLUMN STARTS AT THE LEDE, and the heading stays pinned with it.
+/* THE RIGHT COLUMN STARTS AT THE LEDE by construction now: the lede IS the first thing in it, set
+   as a standfirst. Nothing is measured, and the head stays pinned with its heading -- the two
+   requirements that could not be reconciled while the lede sat on the left.
  *
-   CSS alone cannot do both, and this was measured rather than assumed. Borrowing the grid's second
-   row -- with subgrid, so the lede and the right column share a line -- needs the head to span both
-   rows, and a grid item that spans its container is as tall as the container: sticky then has nowhere
-   to travel and the heading scrolls away (h2 at 129, then -71, then -271). Sticky needs a box the
-   height of its content, which is the opposite.
- *
-   So the offset is a measured number, kept current by a ResizeObserver in index.html: the right column
-   is pushed down by the LEDE's own offset inside the head -- not the title's height, because a margin
-   sits between them. Set per section, since a heading that wraps is taller in one than another. */
-.history-grid > .use-column,
-.history-grid > .prose,
-.history-grid > .table-scroll,
-.playground-body { margin-top: var(--title-offset, 0px); }
-
+   What was tried and removed: subgrid, which aligns the rows but needs the head to span both, making
+   its box as tall as the container so sticky had no travel (h2 measured at 129, then -71, then -271);
+   and a ResizeObserver writing the offset into a custom property, which worked but paid a script for
+   what the markup can state. */
 .history-head {
     grid-column: 1;
     position: sticky;
@@ -1258,10 +1271,6 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
     /* One column: the head sits above the content in flow, so there is nothing to align to. */
     .history-head { grid-column: auto; }
 
-    .history-grid > .use-column,
-    .history-grid > .prose,
-    .history-grid > .table-scroll,
-    .playground-body { margin-top: 0; }
 
     .history-grid { grid-template-columns: minmax(0, 1fr); gap: var(--spacing-5); }
     .history-head { position: static; margin-bottom: var(--spacing-5); }
@@ -1325,6 +1334,7 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
     max-width: 66ch;
     padding-bottom: var(--spacing-5);
     font-size: var(--text-size-reading);
+    letter-spacing: var(--tracking-reading);
     line-height: var(--leading-reading);
     color: var(--fg-muted);
     text-wrap: pretty;
@@ -1505,6 +1515,7 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
 .prose p,
 .prose li {
     font-size: var(--text-size-reading);
+    letter-spacing: var(--tracking-reading);
     line-height: var(--leading-reading);
     color: var(--fg-muted);
     text-wrap: pretty;
@@ -2129,6 +2140,7 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     padding: var(--spacing-4) 0;
     border-top: 1px solid var(--border-subtle);
     font-size: var(--text-size-reading);
+    letter-spacing: var(--tracking-reading);
     line-height: var(--leading-reading);
     color: var(--fg-muted);
     text-wrap: pretty;
