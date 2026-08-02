@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=200305d8">
+<link rel="stylesheet" href="page.css?v=89f2a42c">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -2145,8 +2145,12 @@ useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])</code></pre>
         // The breakpoint lives in ONE place -- this query and the grid rule read the same
         // number, and a matchMedia listener means a rotation or a resized window switches
         // mode without a reload.
+        // Tabs are on at every width. The media query only decides whether the controls collapse to
+        // one row each, which is a separate question from whether the groups are tabbed.
+        panel.dataset.tabs = 'on';
+
         var stacked = window.matchMedia('(max-width: 860px)');
-        function syncTabs() { panel.dataset.tabs = stacked.matches ? 'on' : 'off'; }
+        function syncTabs() { panel.dataset.stacked = stacked.matches ? 'on' : 'off'; }
         stacked.addEventListener('change', syncTabs);
         syncTabs();
     }

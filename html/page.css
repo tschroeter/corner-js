@@ -1777,8 +1777,10 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 
 /* ---------- the panel as tabs, one column only ---------- */
 
-/* Two columns: no tabs at all. The panel is a plain scrolling list beside a sticky
-   artboard, which is the better shape when there is room for both. */
+/* TABS AT EVERY WIDTH. Seven groups in one column is a list nobody reads to the end, and the tab
+   already names the group, so the heading inside it goes. Two attributes, deliberately: the tab mode
+   is one thing and the one-row control layout below is another -- they used to share [data-tabs],
+   and turning tabs on for the desktop silently restyled every control with it. */
 .panel-tabs { display: none; }
 
 .panel[data-tabs="on"] .panel-tabs {
@@ -1786,12 +1788,21 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     gap: 6px;
     margin: calc(-1 * var(--spacing-2)) calc(-1 * var(--spacing-5)) var(--spacing-5);
     padding: 0 var(--spacing-5);
-    /* Scrolls sideways rather than wrapping to three rows of chips on a narrow phone. */
+    /* WRAPS by default: seven chips measure 549px against a 424px column, so a single row hid three
+       of them behind a sideways scroll -- and a tab nobody can see is a control nobody finds. Two
+       rows cost 34 pixels and hide nothing. */
+    flex-wrap: wrap;
+}
+
+/* Stacked, the panel is the whole width and a sideways strip is the better trade: it keeps the
+   controls above the fold rather than spending two rows on chips. */
+.panel[data-stacked="on"] .panel-tabs {
+    flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
-.panel[data-tabs="on"] .panel-tabs::-webkit-scrollbar { display: none; }
+.panel[data-stacked="on"] .panel-tabs::-webkit-scrollbar { display: none; }
 
 .panel-tab {
     flex: none;
@@ -1820,14 +1831,14 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 
 /* ---------- stacked: label, slider and value on ONE row ---------- */
 
-/* Hung off the same [data-tabs] attribute the tab mode uses rather than a second media
-   query -- one switch, one source of truth, and it can be forced on to test.
+/* Hung off [data-stacked], set from the same media query the grid uses -- one switch, one source of
+   truth, and it can be forced on to test.
  *
  * Two rows per control (label above, slider below) is the right shape in a narrow column
  * beside a sticky artboard, where the panel has all the height it wants. Stacked, the
  * artboard is above the panel and every saved row is one less scroll: label left, slider
  * in the middle, value right. */
-.panel[data-tabs="on"] .control {
+.panel[data-stacked="on"] .control {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
@@ -1837,21 +1848,21 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 
 /* The row wrapper stops being a box and lets its two children fall into the grid
    directly, so no markup has to move. */
-.panel[data-tabs="on"] .control-row { display: contents; }
+.panel[data-stacked="on"] .control-row { display: contents; }
 /* The ROW is explicit as well as the column, and it has to be: auto-placement is sparse,
    so once the output had been placed in column 3 the cursor sat past it and the slider --
    column 2, row auto -- was pushed onto a second row. Measured: label at y 322, slider at
    345, which is the two-row layout this was meant to replace. */
-.panel[data-tabs="on"] .control-label { grid-area: 1 / 1; white-space: nowrap; }
-.panel[data-tabs="on"] .control input[type="range"] { grid-area: 1 / 2; }
-.panel[data-tabs="on"] .control-row output { grid-area: 1 / 3; text-align: right; }
+.panel[data-stacked="on"] .control-label { grid-area: 1 / 1; white-space: nowrap; }
+.panel[data-stacked="on"] .control input[type="range"] { grid-area: 1 / 2; }
+.panel[data-stacked="on"] .control-row output { grid-area: 1 / 3; text-align: right; }
 /* Notes span the full width underneath, where they read as a footnote to the row rather
    than as part of it. */
-.panel[data-tabs="on"] .control-note { grid-area: 2 / 1 / auto / -1; margin-top: 4px; }
+.panel[data-stacked="on"] .control-note { grid-area: 2 / 1 / auto / -1; margin-top: 4px; }
 
 /* Toggles and colour wells are already single-row; they only need the same rhythm. */
-.panel[data-tabs="on"] .toggle,
-.panel[data-tabs="on"] .swatch { margin-bottom: var(--spacing-4); }
+.panel[data-stacked="on"] .toggle,
+.panel[data-stacked="on"] .swatch { margin-bottom: var(--spacing-4); }
 
 /* ---------- iOS-style switches, and a flat select ---------- */
 
@@ -1927,7 +1938,7 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 
 /* The three-column row does not apply to the one control whose input is a select: it has
    no value readout and needs the full width for its option text. */
-.panel[data-tabs="on"] .control:has(> select) { display: block; }
+.panel[data-stacked="on"] .control:has(> select) { display: block; }
 
 /* ---------- the page's own chrome, with corner-shape switched on ---------- */
 
