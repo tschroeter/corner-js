@@ -31,19 +31,20 @@ if (!target)
 function assemble ()
 {
     rmSync(DIST, { recursive: true, force: true })
-    mkdirSync(join(DIST, 'build'), { recursive: true })
+    mkdirSync(DIST, { recursive: true })
 
-    // './build/', not 'build/'. An HTML attribute would accept either, but the page also imports the
-    // Svelte fixture dynamically, and `import('build/x.js')` is a BARE specifier -- the browser looks
-    // for a package of that name and throws. Served from dist/ that broke the Svelte check while
-    // every other reference resolved, which is exactly the kind of thing a live host shows first.
+    // FLAT, and every reference explicitly relative. The repo keeps the artifact in build/, a docroot
+    // has no level above it, and `./` is required rather than tidy: the page imports the Svelte
+    // fixture dynamically, and `import('svelte-card.js')` is a BARE specifier -- the browser looks
+    // for a package of that name and throws. It also makes the page's own snippet literally true,
+    // since that shows `<script async src="corner.min.js">`.
     const page = readFileSync(join(ROOT, 'html', 'index.html'), 'utf8')
-        .replaceAll('../build/', './build/')
+        .replaceAll('../build/', './')
 
     writeFileSync(join(DIST, 'index.html'), page)
     copyFileSync(join(ROOT, 'html', 'page.css'), join(DIST, 'page.css'))
-    copyFileSync(join(ROOT, 'build', 'corner.min.js'), join(DIST, 'build', 'corner.min.js'))
-    copyFileSync(join(ROOT, 'build', 'svelte-card.js'), join(DIST, 'build', 'svelte-card.js'))
+    copyFileSync(join(ROOT, 'build', 'corner.min.js'), join(DIST, 'corner.min.js'))
+    copyFileSync(join(ROOT, 'build', 'svelte-card.js'), join(DIST, 'svelte-card.js'))
 
     // A reference the rewrite missed would 404 on a live host and nowhere else. The snippets shown
     // to the reader contain markup as text -- `src="corner.min.js"` is documentation, not a load --
@@ -51,7 +52,7 @@ function assemble ()
     const markup = page.replace(/<pre[\s\S]*?<\/pre>/g, '')
     const missed = [...markup.matchAll(/(?:href|src)="((?!https?:|#|mailto:)[^"]+)"/g)]
         .map(match => match[1].split('?')[0])
-        .filter(path => !['page.css', './build/corner.min.js'].includes(path))
+        .filter(path => !['page.css', './corner.min.js'].includes(path))
 
     if (missed.length)
     {
