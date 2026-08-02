@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=89f2a42c">
+<link rel="stylesheet" href="page.css?v=761a063c">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -292,8 +292,9 @@
 </section>
 
 <section id="playground">
-    <div class="wrap">
-        <div class="section-head">
+    <div class="wrap playground">
+            <div class="playground-head">
+                <div class="section-head">
             <p class="kicker">Playground</p>
             <h2>Playground</h2>
             <p>
@@ -305,8 +306,7 @@
             </p>
         </div>
 
-        <div class="playground">
-            <div class="panel">
+                <div class="panel">
                 <label class="control">
                     <span class="control-row control-row-lead">Select curve type</span>
                     <select id="curve">
@@ -441,8 +441,9 @@
                 </dl>
                 <p class="control-note" id="budgetNote"></p>
             </div>
+            </div>
 
-            <div class="preview-column">
+            <div class="playground-body">
                 <!-- A HOLDER around the artboard carries the sticky, not the column: the column is
                      taller than the viewport now that the code panels do not scroll inside
                      themselves, and a sticky box taller than the viewport leaves the screen before
@@ -459,7 +460,6 @@
                     </span>
                 </div>
                 </div>
-
                 <div class="code" data-corner-js>
                     <div class="code-head">
                         <span>Generated &mdash; CSS</span>
@@ -472,9 +472,7 @@
                     <pre><code id="generated"></code></pre>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
+        </div></section>
 
 <section id="components" style="background: var(--bg-section)">
     <div class="wrap">

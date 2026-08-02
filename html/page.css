@@ -865,20 +865,44 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 1.9); }
 
 .playground {
     display: grid;
-    /* 1 : phi, not a round 280px. The minmax floors keep the panel usable before the
-       single-column breakpoint takes over, and the 0 floor on the second track is what
-       stops the code panel's long lines from widening the grid instead of scrolling. */
-    grid-template-columns: minmax(230px, 1fr) minmax(0, var(--golden-fr));
+    /* Even halves. The controls are grouped into tabs, so the panel no longer needs the narrower
+       track it was given -- and the 0 floors are what stop the code panel's long lines from
+       widening the grid instead of scrolling inside itself. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--spacing-6);
     align-items: start;
 }
 
+/* LEFT: what the section is about, and the controls for it -- held in place, the same way every
+   other two-column section here pins its heading. RIGHT: the shape those controls make and the rule
+   that made it, which is the side with something to scroll.
+ *
+   Sticky needs a container taller than the pinned column to travel in. It had none when the artboard
+   and the controls shared one side: both columns measured ~520px against a 523px grid, 19 pixels of
+   travel, and the column scrolled away with the section. Measured, not assumed. */
+.playground-head {
+    position: sticky;
+    top: calc(var(--header-height) + var(--spacing-4));
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+}
+
+.playground-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+}
+
+/* The heading no longer spans the section, so it stops reserving width it does not use. */
+.playground-head .section-head { margin-bottom: 0; max-width: none; }
+
 @media (max-width: 860px) {
     .playground { grid-template-columns: minmax(0, 1fr); }
-    /* One column: the artboard sits ABOVE the controls in flow, so pinning it would
-       cover them as you scroll down to reach them. */
-    /* One column: the artboard sits above the controls, so pinning it would cover them. */
-    .preview-column { position: static; }
+    /* One column: the artboard sits ABOVE the controls in flow, so pinning either of them would
+       cover the other as you scroll down to reach it. */
+    .playground-head { position: static; }
 }
 
 .panel {
@@ -1002,14 +1026,7 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 1.9); }
    to the controls beside them. It only holds as long as the column fits the viewport, which is why
    the generated snippet carries no prose: a sticky box taller than the viewport leaves the screen
    before its bottom arrives, and that is what took the artboard away early. */
-.preview-column {
-    position: sticky;
-    top: calc(var(--header-height) + var(--spacing-4));
-    align-self: start;
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-5);
-}
+
 
 .stage-holder { width: 100%; }
 
