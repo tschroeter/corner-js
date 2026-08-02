@@ -1,4 +1,4 @@
-# corner.js
+# Continues corners for the web - corner.js
 
 Corner shapes CSS `border-radius` cannot draw: the **continuous** corner — Figma's
 construction, an Apple-like shape — and true **superellipses**, as a `clip-path`, with the
