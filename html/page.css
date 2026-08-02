@@ -880,17 +880,11 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
    Sticky needs a container taller than the pinned column to travel in. It had none when the artboard
    and the controls shared one side: both columns measured ~520px against a 523px grid, 19 pixels of
    travel, and the column scrolled away with the section. Measured, not assumed. */
-/* THREE CELLS, TWO ROWS. The kicker and the heading own the first row alone, so the second row --
-   the lede beside the artboard -- begins at the same line on both sides. The alternative was a
-   measured top margin on the right column, which is wrong again the moment the heading wraps. */
-.playground-title {
-    grid-column: 1;
-    margin-bottom: 0;
-}
-
-.playground-body { grid-column: 2; grid-row: 2; }
-
 .playground-lede { margin: 0; color: var(--fg-muted); text-wrap: pretty; }
+
+/* Same construction as the other two-column sections: the head borrows the grid's rows so the
+   artboard starts at the lede, and stays one element so the heading is pinned with it. */
+
 
 .playground-head {
     grid-column: 1;
@@ -913,8 +907,6 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
     /* One column: the artboard sits ABOVE the controls in flow, so pinning either of them would
        cover the other as you scroll down to reach it. */
     .playground-head { position: static; }
-    .playground-title,
-    .playground-body { grid-column: auto; grid-row: auto; }
 }
 
 .panel {
@@ -1230,26 +1222,22 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
     align-items: start;
 }
 
-/* THE RIGHT COLUMN STARTS AT THE LEDE, not at the kicker. The kicker and the heading own the first
-   row on their own, so the second row begins on the same line on both sides -- the alternative was a
-   measured top margin on the right column, wrong again the moment a heading wraps.
- *
-   What is pinned is therefore the lede, not the heading: the heading scrolls away with the first row.
-   That is the cost of the alignment, and it is the reverse of what this section used to do. */
-.section-title {
-    grid-column: 1;
-    margin-bottom: 0;
-}
 
+/* THE RIGHT COLUMN STARTS AT THE LEDE, and the heading stays pinned with it.
+ *
+   CSS alone cannot do both, and this was measured rather than assumed. Borrowing the grid's second
+   row -- with subgrid, so the lede and the right column share a line -- needs the head to span both
+   rows, and a grid item that spans its container is as tall as the container: sticky then has nowhere
+   to travel and the heading scrolls away (h2 at 129, then -71, then -271). Sticky needs a box the
+   height of its content, which is the opposite.
+ *
+   So the offset is a measured number, kept current by a ResizeObserver in index.html: the right column
+   is pushed down by the LEDE's own offset inside the head -- not the title's height, because a margin
+   sits between them. Set per section, since a heading that wraps is taller in one than another. */
 .history-grid > .use-column,
 .history-grid > .prose,
-.history-grid > .table-scroll { grid-column: 2; grid-row: 2; }
-
-/* The lede used to follow a heading, so it carried a 12px top margin -- which is exactly how far
-   the right column sat above it once the heading moved to its own row. It is the first thing in this
-   box now, and the box provides its own spacing. */
-.history-head > p:first-child,
-.playground-lede { margin-top: 0; }
+.history-grid > .table-scroll,
+.playground-body { margin-top: var(--title-offset, 0px); }
 
 .history-head {
     grid-column: 1;
@@ -1267,11 +1255,13 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
 }
 
 @media (max-width: 860px) {
-    /* One column: the rows collapse, so the explicit placement goes with them. */
-    .section-title,
+    /* One column: the head sits above the content in flow, so there is nothing to align to. */
+    .history-head { grid-column: auto; }
+
     .history-grid > .use-column,
     .history-grid > .prose,
-    .history-grid > .table-scroll { grid-column: auto; grid-row: auto; }
+    .history-grid > .table-scroll,
+    .playground-body { margin-top: 0; }
 
     .history-grid { grid-template-columns: minmax(0, 1fr); gap: var(--spacing-5); }
     .history-head { position: static; margin-bottom: var(--spacing-5); }
