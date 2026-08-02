@@ -2365,12 +2365,12 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
    artboard under the shape. */
 [data-corner-shadow-wrap]:has(> .stage) {
     flex: none;
-    /* NO aspect ratio, for the same reason the hero's board dropped it: this is a window onto an
-       object, not a frame that means something. It gets a height and takes the column's width, so a
-       wider column simply gives the object more room around it rather than growing the board into a
-       square the layout has to accommodate. */
+    /* SQUARE. The object on it is a square by default and the sliders are read against it, so a board
+       in the same proportion keeps the margin around the shape even on all four sides -- in a 3:2
+       board a radius change reads differently horizontally than vertically. The height now follows
+       the column's width, so a wider window gives a taller board. */
     width: 100%;
-    height: clamp(300px, 42dvh, 460px);
+    aspect-ratio: 1;
 }
 
 /* ---------- the support table ---------- */

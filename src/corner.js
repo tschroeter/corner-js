@@ -506,7 +506,6 @@ function ensure_wrapper (el)
 
     if (parent.hasAttribute('data-corner-shadow-wrap')) return parent
 
-    const before = { width: el.offsetWidth, height: el.offsetHeight }
     const display = getComputedStyle(el).display
     const wrapper = document.createElement('div')
 
@@ -523,20 +522,17 @@ function ensure_wrapper (el)
     parent.insertBefore(wrapper, el)
     wrapper.appendChild(el)
 
-    // THE BOX MUST SURVIVE THE MOVE, and the safest way is to leave it alone. If the element still
-    // measures what it did before, nothing else is needed.
+    // NO SIZE IS WRITTEN HERE, and that is deliberate. The element keeps its own, so there is
+    // nothing to restore -- and a measured size copied onto the wrapper froze it: three elements on
+    // the documentation page are sized through the wrapper by a :has() rule, and an inline width
+    // beats any stylesheet. An `aspect-ratio` on the artboard computed correctly and did nothing,
+    // because the module had pinned a height from the first measurement.
     //
     // The SVGs are placed at the WRAPPER's origin, which assumes the element sits there. It does,
     // for everything that is not centred by an auto margin -- and reading the real offset instead
     // was worse: it is measured once at boot, a later move does not resize anything, so nothing
     // redraws and the shadow stays where it was. An auto margin on a shadowed element offsets its
     // shadow by that margin; put the margin on a parent.
-    if (el.offsetWidth !== before.width || el.offsetHeight !== before.height)
-    {
-        wrapper.style.width = before.width + 'px'
-        wrapper.style.height = before.height + 'px'
-    }
-
     return wrapper
 }
 
