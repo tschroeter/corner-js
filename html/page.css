@@ -24,6 +24,9 @@
     --bg-section: var(--gray-a10);
     --bg-surface: var(--white);
     --fg-body: var(--black);
+    /* Between the heading and the copy. Their standfirst sits a step below the heading rather than on
+       it, which is what keeps three levels legible as three. */
+    --fg-strong: rgba(0, 0, 0, 0.75);
     --fg-muted: rgba(0, 0, 0, 0.55);
     --fg-faint: rgba(0, 0, 0, 0.4);
     --border-subtle: rgba(0, 0, 0, 0.06);
@@ -66,7 +69,7 @@
     /* The paragraph that opens a section: one step of hierarchy between the heading and the copy,
        set brighter. 21px against their 24 at a wider viewport. */
     --text-size-standfirst: clamp(19px, 1.6vw, 22px);
-    --text-size-label: 14px;
+    --text-size-label: 15px;
     --text-size-small: 12px;
     --text-size-detail: 13px;
     /* Sizes and leading measured off linear.app: 56px, line height 61.6 = 1.1.
@@ -103,7 +106,10 @@
     /* 90rem. There is no root font-size override in this file, so 1rem is the browser's 16px and
        this resolves to 1440px -- wider than the 1280 it replaced, and it grows with a reader who
        has raised their default font size, which a px cap does not. */
-    --container: 90rem;
+    /* 80rem = 1280, which is what linear.app caps at -- measured, not adopted on faith. At 90rem the
+       reading column grew 160px wider than theirs on a large screen, which is exactly where the 15px
+       copy starts running long. */
+    --container: 80rem;
     /* phi, carrying its own unit. The playground's two columns use it -- controls to artboard as
        1 : phi. It has to be a whole token rather than a bare number: <flex> units are
        not valid inside calc(), so `calc(1fr * var(--golden))` is an invalid declaration
@@ -161,6 +167,7 @@
         --bg-section: #0e0f11;
         --bg-surface: #101113;
         --fg-body: #f7f8f8;
+        --fg-strong: #d0d6e0;
         --fg-muted: #8a8f98;
         --fg-faint: #62666d;
         --border-subtle: rgba(255, 255, 255, 0.05);
@@ -226,7 +233,11 @@ h1 { font-size: var(--heading-size-h1); }
    headline carries a literal <br> -- and so do the three below that have the words for it. */
 h2 {
     font-size: var(--heading-size-h2);
-    line-height: 1.05;
+    /* 1.0 and -0.022em, theirs exactly. Ours ran at 1.05 with -0.008em: at 46px that is a third of the
+       tracking and a whole extra pixel of leading per line, which reads as a looser, larger heading
+       than the same nominal size. */
+    line-height: 1;
+    letter-spacing: -0.022em;
     text-wrap: balance;
 }
 
@@ -340,9 +351,10 @@ code, pre { font-family: var(--font-mono); font-size: var(--text-size-detail); }
 .site-nav {
     display: flex;
     gap: var(--spacing-5);
-    /* 13px, theirs. Small enough that the nav recedes and the headline is the only thing
-       asking to be read -- the size does that, not a lighter colour. */
-    font-size: var(--text-size-detail);
+    /* 15px. The comment here used to claim 13 was theirs; measured on linear.app it is 16, and at 13
+       our nav read as fine print beside a 46px heading. 15 rather than 16 because this nav carries
+       more items in a narrower cap. */
+    font-size: var(--text-size-label);
     color: var(--fg-body);
 }
 
@@ -910,7 +922,7 @@ section[style*="bg-section"] { padding-block: calc(var(--spacing-8) * 3); }
     font-size: var(--text-size-standfirst);
     line-height: 1.35;
     letter-spacing: -0.012em;
-    color: var(--fg-body);
+    color: var(--fg-strong);
     text-wrap: pretty;
 }
 
