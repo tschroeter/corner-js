@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=e0344fd3">
+<link rel="stylesheet" href="page.css?v=c424b0c7">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -611,6 +611,13 @@
                 The shape is declared in markup, so whatever renders the markup is enough &mdash;
                 your framework included. On a plain page that is the entire integration.
             </p>
+
+            <p class="detail-open">
+                <span class="detail-number">2.1</span>
+                <button type="button" popovertarget="sheet-use">
+                    How it mounts <span aria-hidden="true">+</span>
+                </button>
+            </p>
         <div class="code">
             <div class="code-head"><span>Plain HTML &mdash; and Turbo, htmx, Astro, any server render</span></div>
             <pre><code>&lt;script async src="corner.min.js"&gt;&lt;/script&gt;
@@ -618,30 +625,7 @@
 &lt;div class="card" data-corner-js&gt;…&lt;/div&gt;</code></pre>
         </div>
 
-        <div class="prose" style="margin-top: var(--spacing-6)">
-            <p>
-                A mount, a hydration and a swapped fragment are the same event to a
-                <code>MutationObserver</code>, so nothing needs hooking. Inside
-                <a href="https://react.dev" target="_blank" rel="noopener"><span class="link-text">React</span></a>,
-                <a href="https://vuejs.org" target="_blank" rel="noopener"><span class="link-text">Vue</span></a>,
-                <a href="https://svelte.dev" target="_blank" rel="noopener"><span class="link-text">Svelte</span></a> or
-                <a href="https://angular.dev" target="_blank" rel="noopener"><span class="link-text">Angular</span></a>,
-                <a href="https://solidjs.com" target="_blank" rel="noopener"><span class="link-text">Solid</span></a>
-                or <a href="https://turbo.hotwired.dev" target="_blank" rel="noopener"><span class="link-text">Turbo</span></a>
-                there is one thing to do, and it is not about drawing: <strong>render the wrapper
-                yourself</strong>. Four of those six are mounted and measured at the end of this
-                section, in this browser, every time the page loads.
-            </p>
-            <p>
-                corner.js moves every drawn element into a wrapper <code>&lt;div&gt;</code>, because
-                the shadow and the border are redrawn as siblings and need an ancestor that is not
-                clipped. The reconciler, meanwhile, still holds the parent it rendered into &mdash;
-                measured in Chrome, <code>removeChild</code> and <code>insertBefore</code> then both
-                throw <code>NotFoundError</code>. An element already inside
-                <code>[data-corner-shadow-wrap]</code> is left where it is, so the tree the
-                framework owns stays untouched.
-            </p>
-        </div>
+        
 
         <!-- One panel at a time: six snippets stacked would bury the prose under them, and only
              one framework is ever the reader's. -->
@@ -787,36 +771,7 @@ export function Card (props)
             </div>
         </div>
 
-        <div class="prose" style="margin-top: var(--spacing-6)">
-            <p>
-                One detail every one of those shares: the wrapper has to be
-                <strong>positioned</strong>, because the shadow SVG anchors to the nearest
-                positioned ancestor. The element inside keeps whatever size its own CSS gives it
-                &mdash; corner.js does not resize it, and it only puts an element in a wrapper at
-                all when a shadow or a border has to be redrawn.
-            </p>
-            <p>
-                With a bundler, import instead of reaching for the global:
-                <code>import { apply, refresh } from 'corner.js'</code>. The built file is for a
-                <code>&lt;script&gt;</code> tag and sets <code>window.cornerjs</code>; the module
-                source is what npm resolves.
-            </p>
-            <p>
-                <code>apply(root)</code> is not required for the corner to appear &mdash; the
-                observer draws it either way, a microtask later. It matters when the component
-                measures itself on mount, since it draws <em>synchronously</em>. It returns how many
-                elements it started, and a root counts as a target only if it carries the attribute
-                itself.
-            </p>
-            <p>
-                <code>refresh(root)</code> is for a <strong>style</strong> change, which no
-                <code>ResizeObserver</code> reports: a radius or smoothing edit alters the shape,
-                not the box. Pass <code>{ reread: true }</code> when <code>box-shadow</code> or
-                <code>border</code> changed as well. Size changes need neither, and neither does
-                changing <code>data-corner-js</code>: the observer sees the new value and redraws the
-                element in the new curve.
-            </p>
-        </div>
+        
 
 
         <!-- LIVE framework checks, not screenshots of them. Each one mounts a component, has
@@ -863,7 +818,66 @@ card.getBoundingClientRect()   // already clipped
 cornerjs.refresh(el, { reread: true })</code></pre>
         </div>
         </div>
-    </div>
+    
+            <div class="sheet sheet-wide" id="sheet-use" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-use"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">2.1</p>
+                <h3 class="sheet-title">How it mounts</h3>
+                <p>
+                A mount, a hydration and a swapped fragment are the same event to a
+                <code>MutationObserver</code>, so nothing needs hooking. Inside
+                <a href="https://react.dev" target="_blank" rel="noopener"><span class="link-text">React</span></a>,
+                <a href="https://vuejs.org" target="_blank" rel="noopener"><span class="link-text">Vue</span></a>,
+                <a href="https://svelte.dev" target="_blank" rel="noopener"><span class="link-text">Svelte</span></a> or
+                <a href="https://angular.dev" target="_blank" rel="noopener"><span class="link-text">Angular</span></a>,
+                <a href="https://solidjs.com" target="_blank" rel="noopener"><span class="link-text">Solid</span></a>
+                or <a href="https://turbo.hotwired.dev" target="_blank" rel="noopener"><span class="link-text">Turbo</span></a>
+                there is one thing to do, and it is not about drawing: <strong>render the wrapper
+                yourself</strong>. Four of those six are mounted and measured at the end of this
+                section, in this browser, every time the page loads.
+            </p>
+            <p>
+                corner.js moves every drawn element into a wrapper <code>&lt;div&gt;</code>, because
+                the shadow and the border are redrawn as siblings and need an ancestor that is not
+                clipped. The reconciler, meanwhile, still holds the parent it rendered into &mdash;
+                measured in Chrome, <code>removeChild</code> and <code>insertBefore</code> then both
+                throw <code>NotFoundError</code>. An element already inside
+                <code>[data-corner-shadow-wrap]</code> is left where it is, so the tree the
+                framework owns stays untouched.
+            </p>
+<p>
+                One detail every one of those shares: the wrapper has to be
+                <strong>positioned</strong>, because the shadow SVG anchors to the nearest
+                positioned ancestor. The element inside keeps whatever size its own CSS gives it
+                &mdash; corner.js does not resize it, and it only puts an element in a wrapper at
+                all when a shadow or a border has to be redrawn.
+            </p>
+            <p>
+                With a bundler, import instead of reaching for the global:
+                <code>import { apply, refresh } from 'corner.js'</code>. The built file is for a
+                <code>&lt;script&gt;</code> tag and sets <code>window.cornerjs</code>; the module
+                source is what npm resolves.
+            </p>
+            <p>
+                <code>apply(root)</code> is not required for the corner to appear &mdash; the
+                observer draws it either way, a microtask later. It matters when the component
+                measures itself on mount, since it draws <em>synchronously</em>. It returns how many
+                elements it started, and a root counts as a target only if it carries the attribute
+                itself.
+            </p>
+            <p>
+                <code>refresh(root)</code> is for a <strong>style</strong> change, which no
+                <code>ResizeObserver</code> reports: a radius or smoothing edit alters the shape,
+                not the box. Pass <code>{ reread: true }</code> when <code>box-shadow</code> or
+                <code>border</code> changed as well. Size changes need neither, and neither does
+                changing <code>data-corner-js</code>: the observer sees the new value and redraws the
+                element in the new curve.
+            </p>
+            </div>
+        </div>
 </section>
 
 <section id="limits">
@@ -881,8 +895,24 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 that clips inherits them.
             </p>
 
-        <div class="prose">
-            <ul>
+            <p class="detail-open">
+                <span class="detail-number">3.1</span>
+                <button type="button" popovertarget="sheet-limits">
+                    What clipping costs <span aria-hidden="true">+</span>
+                </button>
+            </p>
+
+        
+        </div>
+    
+            <div class="sheet sheet-wide" id="sheet-limits" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-limits"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">3.1</p>
+                <h3 class="sheet-title">What clipping costs</h3>
+                <ul>
                 <li>
                     <strong>Everything inside the element is clipped</strong> &mdash; children,
                     overflow, pseudo-elements, a scrollbar. A tooltip or dropdown that leaves the
@@ -958,9 +988,8 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                     </svg>
                 </button>
             </div>
+            </div>
         </div>
-        </div>
-    </div>
 </section>
 
 <section id="support">
@@ -1027,6 +1056,13 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 superellipse modes. The column that applies to you is marked.
             </p>
 
+            <p class="detail-open">
+                <span class="detail-number">4.1</span>
+                <button type="button" popovertarget="sheet-tiers">
+                    How the tiers work <span aria-hidden="true">+</span>
+                </button>
+            </p>
+
         <div class="table-scroll">
             <table id="drawTable">
                 <thead>
@@ -1060,8 +1096,17 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             </table>
         </div>
 
-        <div class="prose" style="margin-top: var(--spacing-6)">
-            <p>
+        
+        </div>
+    
+            <div class="sheet sheet-wide" id="sheet-tiers" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-tiers"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">4.1</p>
+                <h3 class="sheet-title">How the tiers work</h3>
+                <p>
                 <strong id="drawVerdict">&ndash;</strong>
             </p>
             <p>
@@ -1103,9 +1148,8 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 beside it, because a clip removes the element's own. That is not a tier &mdash; it
                 is the consequence of clipping, and it applies in every browser.
             </p>
+            </div>
         </div>
-        </div>
-    </div>
 </section>
 
 <section id="shape" style="background: var(--bg-section)">
@@ -1123,8 +1167,69 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 construction with a parameter rather than one exponent.
             </p>
 
-        <div class="prose">
-            <p>
+            <p class="detail-open">
+                <span class="detail-number">5.1</span>
+                <button type="button" popovertarget="sheet-shape">
+                    The construction <span aria-hidden="true">+</span>
+                </button>
+            </p>
+
+        
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th>Exponent</th><th>Name</th><th>In CSS</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>2</td><td>Circle &mdash; identical to <code>border-radius</code></td>
+                        <td><code>round</code>, or <code>superellipse(1)</code></td></tr>
+                    <tr><td>4</td><td><a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">Squircle</span></a>
+                        &mdash; Piet Hein's case</td>
+                        <td><code>squircle</code>, or <code>superellipse(2)</code></td></tr>
+                    <tr><td>5</td><td>No established name. The closest single exponent to Apple's
+                        curve, and still off</td>
+                        <td><code>superellipse(2.3219)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th>Input</th><th>Default</th><th>Meaning</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>border-radius</code></td>
+                        <td>&mdash;</td>
+                        <td>Corner size. Read as the construction's input, not merely as a fallback. Per-corner values are honoured.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--corner-smoothing</code></td>
+                        <td><code>0.6</code></td>
+                        <td>How much of the corner is a Bézier ramp rather than a circular arc. Inherits.</td>
+                    </tr>
+                    <tr>
+                        <td><code>.corner-continuous</code></td>
+                        <td>&mdash;</td>
+                        <td>Selects this construction. Without it the element gets a <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a> (n&thinsp;=&thinsp;4, the <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">squircle</span></a>), or n&thinsp;=&thinsp;5, and defers to native <code>corner-shape</code> where that exists.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        </div>
+    
+            <div class="sheet sheet-wide" id="sheet-shape" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-shape"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">5.1</p>
+                <h3 class="sheet-title">The construction</h3>
+                <p>
                 Two curve families provide continuous curvature: the
                 <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a>, whose exponent 4 case is the
                 <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">squircle</span></a>, and an arc with Bézier shoulders, which is
@@ -1164,62 +1269,15 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 smoothing gives way, so a capsule end stays clean. The <em>Derived</em> panel reads
                 the values back out of the drawn path.
             </p>
-        </div>
-
-        <div class="table-scroll">
-            <table>
-                <thead>
-                    <tr><th>Exponent</th><th>Name</th><th>In CSS</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>2</td><td>Circle &mdash; identical to <code>border-radius</code></td>
-                        <td><code>round</code>, or <code>superellipse(1)</code></td></tr>
-                    <tr><td>4</td><td><a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">Squircle</span></a>
-                        &mdash; Piet Hein's case</td>
-                        <td><code>squircle</code>, or <code>superellipse(2)</code></td></tr>
-                    <tr><td>5</td><td>No established name. The closest single exponent to Apple's
-                        curve, and still off</td>
-                        <td><code>superellipse(2.3219)</code></td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="prose" style="margin-top: var(--spacing-5)">
-            <p>
+<p>
                 <strong>The CSS parameter is not the exponent</strong>, which is the easiest thing
                 here to get wrong: it is its base-2 logarithm. Measured in this browser,
                 <code>superellipse(1)</code> computes to <code>round</code> and
                 <code>superellipse(2)</code> to <code>squircle</code> &mdash; a circle is exponent 2,
                 so the keyword is exponent 4. A squircle is <em>not</em> exponent 5.
             </p>
+            </div>
         </div>
-
-        <div class="table-scroll">
-            <table>
-                <thead>
-                    <tr><th>Input</th><th>Default</th><th>Meaning</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>border-radius</code></td>
-                        <td>&mdash;</td>
-                        <td>Corner size. Read as the construction's input, not merely as a fallback. Per-corner values are honoured.</td>
-                    </tr>
-                    <tr>
-                        <td><code>--corner-smoothing</code></td>
-                        <td><code>0.6</code></td>
-                        <td>How much of the corner is a Bézier ramp rather than a circular arc. Inherits.</td>
-                    </tr>
-                    <tr>
-                        <td><code>.corner-continuous</code></td>
-                        <td>&mdash;</td>
-                        <td>Selects this construction. Without it the element gets a <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a> (n&thinsp;=&thinsp;4, the <a href="https://en.wikipedia.org/wiki/Squircle" target="_blank" rel="noopener"><span class="link-text">squircle</span></a>), or n&thinsp;=&thinsp;5, and defers to native <code>corner-shape</code> where that exists.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        </div>
-    </div>
 </section>
 
 <section id="shadow">
@@ -1238,14 +1296,14 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 clipped element.
             </p>
 
-        <div class="prose">
-            <p>
-                It is drawn as its own SVG along the same path, as a sibling inside a
-                <code>[data-corner-shadow-wrap]</code> wrapper. A rounded rect on the wrapper was
-                tried first; its circular corners visibly miss the continuous curve.
+            <p class="detail-open">
+                <span class="detail-number">6.1</span>
+                <button type="button" popovertarget="sheet-shadow">
+                    Along the same path <span aria-hidden="true">+</span>
+                </button>
             </p>
-            <p>Built from the element's own computed <code>box-shadow</code>, per layer:</p>
-        </div>
+
+        
 
         <div class="table-scroll">
             <table>
@@ -1262,8 +1320,23 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             </table>
         </div>
 
-        <div class="prose" style="margin-top: var(--spacing-6)">
-            <p>
+        
+        </div>
+    
+            <div class="sheet sheet-wide" id="sheet-shadow" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-shadow"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">6.1</p>
+                <h3 class="sheet-title">Along the same path</h3>
+                <p>
+                It is drawn as its own SVG along the same path, as a sibling inside a
+                <code>[data-corner-shadow-wrap]</code> wrapper. A rounded rect on the wrapper was
+                tried first; its circular corners visibly miss the continuous curve.
+            </p>
+            <p>Built from the element's own computed <code>box-shadow</code>, per layer:</p>
+<p>
                 Its size comes from the shadow's reach
                 (<code>1.5 &times; blur + offset + spread</code>), not a fixed margin.
             </p>
@@ -1288,9 +1361,8 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 everything drawn lives inside that same subtree, so the scale would apply twice. A
                 500px box at <code>scale(0.97)</code> got a 485px shadow.
             </p>
+            </div>
         </div>
-        </div>
-    </div>
 </section>
 
 <section id="history" style="background: var(--bg-section)">
@@ -1322,8 +1394,9 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 </li>
                 <li class="card" data-corner-js>
                     <p class="card-year">1959</p>
-                    <h3 class="card-title">The name, and a square</h3>
-                    <p class="card-line">Piet Hein needed a form for Sergels Torg that was neither circle nor rectangle.</p>
+                    <h3 class="card-title">Superellipse</h3>
+                    <p class="card-line">Piet Hein names the family and builds a Stockholm square out of
+                        exponent 5/2. The fountain is still that shape.</p>
                     <button class="card-open" type="button" popovertarget="sheet-hein-1959"
                             aria-label="Read more: 1959 — Piet Hein">
                         <span aria-hidden="true">+</span>
@@ -1349,8 +1422,9 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 </li>
                 <li class="card" data-corner-js>
                     <p class="card-year">2011</p>
-                    <h3 class="card-title">The first screens</h3>
-                    <p class="card-line">Nokia used it as an identity, not a detail — and MeeGo built an icon grid on it.</p>
+                    <h3 class="card-title">Onto screens</h3>
+                    <p class="card-line">Nokia treats it as an identity rather than a detail, and MeeGo
+                        builds a whole icon grid on it.</p>
                     <button class="card-open" type="button" popovertarget="sheet-nokia-2011"
                             aria-label="Read more: 2011 — Nokia">
                         <span aria-hidden="true">+</span>
@@ -1377,7 +1451,8 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 <li class="card" data-corner-js>
                     <p class="card-year">2025</p>
                     <h3 class="card-title">Into the platform</h3>
-                    <p class="card-line"><code>corner-shape</code> puts the Lamé family into CSS itself.</p>
+                    <p class="card-line"><code>corner-shape</code> puts the Lamé family into CSS &mdash;
+                        one browser so far, and still not Apple's curve.</p>
                     <button class="card-open" type="button" popovertarget="sheet-css-2025"
                             aria-label="Read more: 2025 — CSS">
                         <span aria-hidden="true">+</span>

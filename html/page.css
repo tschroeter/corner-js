@@ -2515,17 +2515,21 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
    horizontal scrollbar of its own. */
 .card-row-wrap {
     --bleed: max(0px, calc((100vw - var(--container)) / 2));
+    --inset: calc(var(--bleed) + var(--spacing-6));
     position: relative;
-    margin-left: calc(-1 * var(--spacing-6));
-    margin-right: calc(-1 * (var(--bleed) + var(--spacing-6)));
+    /* BOTH sides, so a card scrolled past the start leaves at the viewport edge rather than being cut
+       off at the container. The row's own padding below puts the first card back at the container. */
+    margin-inline: calc(-1 * var(--inset));
 }
 
 .card-row {
     display: flex;
     gap: var(--spacing-5);
     margin: 0;
-    padding: 4px var(--spacing-6) var(--spacing-5);
-    padding-right: calc(var(--bleed) + var(--spacing-6));
+    padding-block: 4px var(--spacing-5);
+    /* Equal to the bleed, so the first card starts flush with the heading while the track itself runs
+       edge to edge. */
+    padding-inline: var(--inset);
     list-style: none;
     overflow-x: auto;
     scroll-snap-type: inline mandatory;
@@ -2534,7 +2538,7 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     scrollbar-width: none;
     overscroll-behavior-inline: contain;
     /* Snapping lands the card at the container's edge, not under the bleed. */
-    scroll-padding-inline-start: var(--spacing-6);
+    scroll-padding-inline-start: var(--inset);
 }
 
 .card-row::-webkit-scrollbar { display: none; }
@@ -2546,7 +2550,6 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     display: flex;
     gap: var(--spacing-3);
     justify-content: flex-end;
-    margin-right: calc(var(--bleed) + var(--spacing-6));
 }
 
 .card-nav button {
@@ -2579,13 +2582,26 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     display: flex;
     flex-direction: column;
     flex: none;
-    /* Two and a bit visible at a time, which is what makes the row legible as a row. */
-    width: min(300px, 72vw);
-    min-height: 260px;
+    position: relative;
+    /* SIZED BY HOW MANY SHOULD BE VISIBLE, not by a fixed width -- so the card grows with the window
+       instead of leaving a wider gap. Four is the ceiling, and only on a wide screen: apple.com runs
+       337x300 at a 1698px viewport, which is under three visible, and their cards are the bigger ones.
+       The peek that says "this scrolls" comes free from the bleed, since the next card is already past
+       the container edge. */
+    --visible: 2;
+    width: calc((100% - (var(--visible) - 1) * var(--spacing-5)) / var(--visible));
+    min-height: 340px;
     padding: var(--spacing-5);
     scroll-snap-align: start;
     background: var(--bg-surface);
-    border-radius: 22px;
+    border-radius: 28px;
+}
+
+@media (min-width: 700px) { .card { --visible: 3; } }
+@media (min-width: 1400px) { .card { --visible: 4; } }
+
+@media (max-width: 520px) {
+    .card { --visible: 1.12; }
 }
 
 .card-year {
@@ -2614,6 +2630,44 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 }
 
 /* Bottom right, on its own line, so the card's text length does not move it. */
+/* PRESS AND HOVER. A card that opens something has to say so before it is clicked -- and the press is
+   what makes the popover feel like it came from the card rather than from the page. Transform only, so
+   nothing reflows and the clip-path underneath is untouched. */
+.card {
+    transition: translate 160ms ease, box-shadow 160ms ease;
+}
+
+.card:hover { translate: 0 -2px; }
+
+/* NO PRESS MOVEMENT ON THE CARD. It used to drop back down while the button was :active, which moved
+   the element between pointerdown and pointerup -- if the pointer ended up outside the shifted box, no
+   click was dispatched at all and it took a second press to open. The press now shows on the plus,
+   which is not the thing receiving the click: the stretched overlay is. */
+
+/* THE WHOLE CARD OPENS IT. One button with one label, stretched over the whole card -- rather than
+   wrapping the content in a <button>, which cannot legally contain a heading.
+ *
+   The overlay is positioned against the CARD, so .card-open must not be positioned itself: inset: 0 on
+   a positioned button covers only the button, which is what the first attempt did. And it sits on top
+   of the text rather than under it, because an overlay below the text leaves the text unclickable --
+   the cost is that the teaser is no longer selectable. The full text in the sheet is. */
+.card-open::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+}
+
+.card-open {
+    transition: scale 120ms ease, background-color 120ms ease;
+}
+
+.card-open:hover { scale: 1.06; }
+.card-open:active { scale: 0.94; }
+
+.card-open:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
 .card-open {
     display: grid;
     place-items: center;
@@ -2716,6 +2770,47 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 }
 
 .sheet-close:hover { color: var(--fg-body); }
+
+/* THE OPENER, the reference's own shape: a small number, a label, a plus. It sits under the standfirst
+   and is the only thing standing where a column of prose used to. */
+.detail-open {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-4);
+    margin: var(--spacing-5) 0 0;
+}
+
+.detail-number {
+    font: 400 var(--text-size-detail) / 1.5 var(--font-mono);
+    color: var(--fg-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.detail-open button {
+    padding: 0;
+    font: 400 var(--text-size-reading) / 1.5 var(--font-body);
+    letter-spacing: var(--tracking-reading);
+    color: var(--fg-body);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.detail-open button:hover { text-decoration: underline; }
+.detail-open button:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+/* Wider than a card's sheet: these carry the argument, not a single entry. */
+.sheet-wide { width: min(720px, calc(100vw - 2 * var(--spacing-6))); }
+
+.sheet-wide ul { margin: 0 0 var(--spacing-4); padding-left: 1.2em; }
+
+.sheet-wide li {
+    margin-bottom: var(--spacing-3);
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    letter-spacing: var(--tracking-reading);
+    color: var(--fg-muted);
+}
 
 /* ---------- the support table ---------- */
 
