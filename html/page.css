@@ -1405,17 +1405,31 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
 /* Three at most, and auto-fit below that so the row breaks on its own rather than at a
    breakpoint: past three the cells get small enough that the corner is the least of what you
    see in them. */
+/* A SCROLLING ROW, on the same terms as the history cards: the track is the container's width, so the
+   count holds at every window size, and the cut tile is what says it scrolls. Eight demos in a
+   wrapping grid meant three rows of them and a section three screens tall. */
 .demo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    display: flex;
     gap: var(--spacing-5);
+    padding-block: 4px var(--spacing-5);
+    padding-inline: var(--inset);
+    overflow-x: auto;
+    scroll-snap-type: inline mandatory;
+    scroll-padding-inline-start: var(--inset);
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
 }
 
-@media (min-width: 960px) {
-    .demo-grid { grid-template-columns: repeat(3, 1fr); }
-}
 
+.demo-grid::-webkit-scrollbar { display: none; }
+
+
+/* The same fractional count the cards use, so the two rows on this page behave alike. */
 .demo {
+    flex: none;
+    --visible: 1;
+    width: calc((var(--track) - (var(--visible) - 1) * var(--spacing-5)) / var(--visible));
+    scroll-snap-align: start;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-4);
@@ -1424,6 +1438,11 @@ button.ghost:hover { color: var(--fg-body); border-color: var(--border-strong); 
     border-radius: var(--rounded-xl);
     background: var(--bg-section);
 }
+/* AFTER .demo, not before: --visible is set in that rule too, and at equal specificity the later
+   declaration wins -- placed above, these were overridden and every tile came out full width. */
+@media (min-width: 560px) { .demo { --visible: 2; } }
+@media (min-width: 900px) { .demo { --visible: 3; } }
+
 
 .demo-label {
     font-size: var(--text-size-small);
@@ -2513,12 +2532,26 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
    --bleed is the distance from the container's edge to the viewport's, which is 0 until the window is
    wider than the container. body carries overflow-x: clip, so the vw arithmetic cannot introduce a
    horizontal scrollbar of its own. */
-/* THE TRACK IS THE CONTAINER, not the viewport -- and that is measured off the reference rather than
-   assumed: their card track runs 1022px inside a 1698px window, so it does NOT reach the edge. Which
-   is the whole reason their count stays at three however wide the screen gets, while a track bled to
-   the viewport shows one more card per 400 pixels of window. The cut card is inside the track. */
-.card-row-wrap {
+/* THREE FULL CARDS, THE FOURTH CUT BY THE WINDOW. Both at once, and they are not in conflict once the
+   card is sized off the CONTAINER while the track bleeds to the viewport:
+ *
+   --track is the container's content width, capped, so three cards always fill exactly the container.
+   The scrollport then runs on to the right edge of the window, which is where the fourth card is cut.
+   Computed from the reference's own row: cards start at 277, run about 410 wide, and the fourth begins
+   at 1597 and leaves the window -- a container of roughly 1320 with the cut outside it.
+ *
+   Count and cut therefore have separate owners: the container decides how many are whole, the window
+   decides where the next one ends. */
+.card-row-wrap,
+.demo-row-wrap {
+    --bleed: max(0px, calc((100vw - var(--container)) / 2));
+    --track: min(calc(100vw - 2 * var(--spacing-6)), calc(var(--container) - 2 * var(--spacing-6)));
+    --inset: calc(var(--bleed) + var(--spacing-6));
     position: relative;
+    /* BOTH edges: a card scrolled out of view leaves at the window's edge rather than being clipped at
+       the container. That works together with a fixed count only because the card's width comes off
+       --track -- when it came off the row's own box, every extra 400px of window added a card. */
+    margin-inline: calc(-1 * var(--inset));
 }
 
 .card-row {
@@ -2526,29 +2559,33 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     gap: var(--spacing-5);
     margin: 0;
     padding-block: 4px var(--spacing-5);
-    /* A little breathing room for the focus ring and the hover lift, not an inset: the first card is
-       meant to sit flush with the heading. */
-    padding-inline: 0;
-    margin-inline: -2px;
+    /* The first card sits flush with the heading and the last can still reach that edge, while the
+       scrollport itself runs to both window edges. */
+    padding-inline: var(--inset);
     list-style: none;
     overflow-x: auto;
     scroll-snap-type: inline mandatory;
-    /* NO SCROLLBAR. The two buttons below are the affordance instead -- and the row keeps a tabindex,
-       so arrow keys still scroll it for anyone not using the buttons. */
+    /* NO SCROLLBAR. The two buttons are the affordance instead, and they are the keyboard access too --
+       the row itself is NOT focusable: with a tabindex, clicking a card focused the row, the browser
+       scrolled it into view, and the card moved out from under the pointer between pointerdown and
+       pointerup. No click was dispatched, which is the second time that mechanism cost a first click. */
     scrollbar-width: none;
     overscroll-behavior-inline: contain;
-    scroll-padding-inline-start: 2px;
+    /* Snapping lands a card at the container's edge, not under the bleed. */
+    scroll-padding-inline-start: var(--inset);
 }
+
 
 .card-row::-webkit-scrollbar { display: none; }
 
-.card-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
-
 /* The two buttons, bottom right of the row, where the reference puts them. */
+/* Right-aligned to the CONTAINER, not to the window. The nav lives inside the bleeding wrapper, so
+   without this it sat flush against the viewport edge -- present, but reading as cut off. */
 .card-nav {
     display: flex;
     gap: var(--spacing-3);
     justify-content: flex-end;
+    margin-inline: var(--inset);
 }
 
 .card-nav button {
@@ -2587,11 +2624,10 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
        337x300 at a 1698px viewport, which is under three visible, and their cards are the bigger ones.
        The peek that says "this scrolls" comes free from the bleed, since the next card is already past
        the container edge. */
-    /* Fractional on purpose: three whole cards and a quarter of the fourth, so the cut card is what
-       says the row scrolls. The count no longer changes with the window -- the track is capped by the
-       container, so this holds at 1200 and at 2500 alike. */
-    --visible: 1.15;
-    width: calc((100% - (var(--visible) - 1) * var(--spacing-5)) / var(--visible));
+    /* Whole numbers now: three fill the container exactly, and the cut comes from the bleed rather than
+       from a fraction. Sized off --track, since the row's own box reaches past the container. */
+    --visible: 1;
+    width: calc((var(--track) - (var(--visible) - 1) * var(--spacing-5)) / var(--visible));
     min-height: 340px;
     padding: var(--spacing-5);
     scroll-snap-align: start;
@@ -2599,8 +2635,8 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     border-radius: 28px;
 }
 
-@media (min-width: 560px) { .card { --visible: 2.2; } }
-@media (min-width: 900px) { .card { --visible: 3.25; } }
+@media (min-width: 560px) { .card { --visible: 2; } }
+@media (min-width: 900px) { .card { --visible: 3; } }
 
 .card-year {
     margin: 0 0 var(--spacing-4);
@@ -2642,21 +2678,11 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
    click was dispatched at all and it took a second press to open. The press now shows on the plus,
    which is not the thing receiving the click: the stretched overlay is. */
 
-/* THE WHOLE CARD OPENS IT. One button with one label, stretched over the whole card -- rather than
-   wrapping the content in a <button>, which cannot legally contain a heading.
- *
-   The overlay is positioned against the CARD, so .card-open must not be positioned itself: inset: 0 on
-   a positioned button covers only the button, which is what the first attempt did. And it sits on top
-   of the text rather than under it, because an overlay below the text leaves the text unclickable --
-   the cost is that the teaser is no longer selectable. The full text in the sheet is. */
-.card-open::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    border-radius: inherit;
-}
-
+/* The plus stays the accessible invoker -- one button, one label, keyboard reachable. Making the whole
+   card clickable is a click handler in index.html rather than a stretched overlay: the overlay sat
+   below the card's own text in hit testing, because the card carries a clip-path from corner.js and
+   that changes what the pseudo-element competes with. A handler has no such argument with the
+   stacking order. */
 .card-open {
     transition: scale 120ms ease, background-color 120ms ease;
 }

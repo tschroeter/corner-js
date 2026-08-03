@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=47a99a83">
+<link rel="stylesheet" href="page.css?v=0a23819a">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -496,7 +496,8 @@
              at every column count -- that needs pairwise gaps of four, so nine slots -- so this is
              tuned for the three-column layout, where none of them share an edge. At two columns the
              last two land one above the other. -->
-        <div class="demo-grid">
+        <div class="demo-row-wrap">
+        <div class="demo-grid" data-card-row>
             <div class="demo">
                 <span class="demo-label">Buttons</span>
                 <div class="demo-body">
@@ -590,6 +591,22 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="card-nav" data-card-nav>
+            <button type="button" data-scroll="-1" aria-label="Previous examples" disabled>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 3 5 8l5 5"/>
+                </svg>
+            </button>
+            <button type="button" data-scroll="1" aria-label="More examples">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 3l5 5-5 5"/>
+                </svg>
+            </button>
+        </div>
         </div>
 
     </div>
@@ -974,20 +991,6 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                 </li>
             </ul>
 
-            <div class="card-nav" id="historyNav">
-                <button type="button" data-scroll="-1" aria-label="Previous cards" disabled>
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M10 3 5 8l5 5"/>
-                    </svg>
-                </button>
-                <button type="button" data-scroll="1" aria-label="More cards">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M6 3l5 5-5 5"/>
-                    </svg>
-                </button>
-            </div>
             </div>
         </div>
 </section>
@@ -1382,7 +1385,7 @@ cornerjs.refresh(el, { reread: true })</code></pre>
         </div>
 
         <div class="card-row-wrap">
-            <ul class="card-row" id="historyCards" tabindex="0">
+            <ul class="card-row" id="historyCards" data-card-row>
                 <li class="card" data-corner-js>
                     <p class="card-year">1818</p>
                     <h3 class="card-title">The curve</h3>
@@ -1459,6 +1462,21 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                     </button>
                 </li>
             </ul>
+
+            <div class="card-nav" data-card-nav>
+                <button type="button" data-scroll="-1" aria-label="Previous cards" disabled>
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 3 5 8l5 5"/>
+                    </svg>
+                </button>
+                <button type="button" data-scroll="1" aria-label="More cards">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 3l5 5-5 5"/>
+                    </svg>
+                </button>
+            </div>
         </div>
 
             <div class="sheet" id="sheet-lame-1818" popover="auto" data-corner-js>
@@ -2311,6 +2329,34 @@ useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])</code></pre>
         if (typeof ResizeObserver !== 'undefined') new ResizeObserver(align).observe(head);
     }());
 
+    // ---- the whole card opens its sheet ----
+    //
+    // Delegated, so cards added later need nothing. The plus is still the real invoker -- it carries the
+    // label and the keyboard focus -- and this only forwards a click that landed anywhere else on the
+    // card. A stretched overlay was tried first and lost the hit test to the card's own text, because
+    // the card carries a clip-path and that changes what a pseudo-element competes with.
+    document.addEventListener('click', function (event)
+    {
+        var card = event.target.closest && event.target.closest('.card');
+
+        if (!card) return;
+
+        // Anything already interactive keeps its own behaviour.
+        if (event.target.closest('a, button, input, select, textarea, summary')) return;
+
+        var opener = card.querySelector('.card-open');
+
+        if (!opener) return;
+
+        // AFTER the current event, not during it. An auto popover opened while a real click is still
+        // being dispatched is closed again by that same click: the browser's light dismiss sees a
+        // pointer sequence that began before the popover existed. Forwarding to the invoker was not
+        // enough on its own -- a synthetic click nested inside the real one is still inside it. Only a
+        // press directly on the plus escaped, because a trusted click on the invoker itself is exempt,
+        // and that asymmetry is what identified the cause. One turn of the event loop settles it.
+        setTimeout(function () { opener.click(); }, 0);
+    });
+
     // ---- the card row's two buttons ----
     //
     // A scroll container with a hidden scrollbar needs a visible affordance, and buttons are the one
@@ -2319,16 +2365,21 @@ useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])</code></pre>
     // arrow keys scroll it without the buttons.
     (function ()
     {
-        var row = document.getElementById('historyCards');
-        var nav = document.getElementById('historyNav');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-card-row]'), wire);
+    }());
 
-        if (!row || !nav) return;
+    function wire (row)
+    {
+        var nav = row.parentElement.querySelector('[data-card-nav]')
+            || (row.nextElementSibling && row.nextElementSibling.matches('[data-card-nav]') ? row.nextElementSibling : null);
+
+        if (!nav) return;
 
         var buttons = Array.prototype.slice.call(nav.querySelectorAll('button'));
 
         function step ()
         {
-            var card = row.querySelector('.card');
+            var card = row.querySelector('.card, .demo');
             var gap = parseFloat(getComputedStyle(row).columnGap) || 0;
 
             return card ? card.getBoundingClientRect().width + gap : row.clientWidth * 0.8;
@@ -2359,7 +2410,7 @@ useEffect(() =&gt; { cornerjs.apply(ref.current) }, [])</code></pre>
         row.addEventListener('scroll', sync, { passive: true });
         window.addEventListener('resize', sync);
         sync();
-    }());
+    }
 
     // ---- TABS, but only where the layout has collapsed to one column ----
     //
