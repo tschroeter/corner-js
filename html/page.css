@@ -2480,6 +2480,175 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     aspect-ratio: 1;
 }
 
+/* ---------- cards, and the sheets behind them ---------- */
+
+/* A ROW THAT SCROLLS, not a grid that wraps: eight entries in a timeline have an order, and a row
+   keeps it readable at any width -- measured off apple.com, whose own card track runs 1289px of
+   content in 1022px of viewport with scroll-snap on the inline axis. */
+.card-row-wrap {
+    /* Full bleed to the viewport edge, so the row reads as continuing rather than stopping short. The
+       negative margin is the wrap's own padding, given back. */
+    margin-inline: calc(-1 * var(--spacing-6));
+}
+
+.card-row {
+    display: flex;
+    gap: var(--spacing-5);
+    margin: 0;
+    padding: 4px var(--spacing-6) var(--spacing-5);
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: inline mandatory;
+    scrollbar-width: thin;
+    overscroll-behavior-inline: contain;
+}
+
+/* NO BORDER AND NO SHADOW, and that is structural rather than cosmetic: either one makes corner.js
+   insert a wrapper for the sibling SVG, and a <div> inside a <ul> is invalid markup -- the wrappers
+   ended up carrying the flex and the snap instead of the list items. White on the section's tint
+   separates the card by itself, which is also what apple.com does. */
+.card {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    /* Two and a bit visible at a time, which is what makes the row legible as a row. */
+    width: min(300px, 72vw);
+    min-height: 260px;
+    padding: var(--spacing-5);
+    scroll-snap-align: start;
+    background: var(--bg-surface);
+    border-radius: 22px;
+}
+
+.card-year {
+    margin: 0 0 var(--spacing-4);
+    font: 600 var(--text-size-small) / 1.5 var(--font-body);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+}
+
+.card-title {
+    margin: 0 0 var(--spacing-3);
+    font-size: var(--heading-size-h3);
+    line-height: 1.15;
+    letter-spacing: -0.014em;
+    text-wrap: balance;
+}
+
+.card-line {
+    margin: 0;
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    letter-spacing: var(--tracking-reading);
+    color: var(--fg-muted);
+    text-wrap: pretty;
+}
+
+/* Bottom right, on its own line, so the card's text length does not move it. */
+.card-open {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin-top: auto;
+    margin-left: auto;
+    padding: 0;
+    font: 400 20px / 1 var(--font-body);
+    color: var(--bg-base);
+    background: var(--fg-body);
+    border: 0;
+    border-radius: 9999px;
+    corner-shape: round;
+    cursor: pointer;
+}
+
+/* THE SHEET is a popover, so the top layer, the backdrop, the light dismiss and returning focus to
+   the button are the browser's job. What is left here is what it looks like. */
+.sheet {
+    width: min(560px, calc(100vw - 2 * var(--spacing-6)));
+    max-height: min(80dvh, 720px);
+    margin: auto;
+    padding: var(--spacing-6);
+    overflow-y: auto;
+    color: var(--fg-body);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 28px;
+    /* Animated in and out. allow-discrete is what lets `display` participate, and @starting-style
+       gives the closed state to transition FROM -- without it the open is instant. */
+    opacity: 0;
+    translate: 0 8px;
+    transition: opacity 220ms ease, translate 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                overlay 220ms allow-discrete, display 220ms allow-discrete;
+}
+
+.sheet:popover-open {
+    opacity: 1;
+    translate: 0 0;
+}
+
+@starting-style {
+    .sheet:popover-open {
+        opacity: 0;
+        translate: 0 8px;
+    }
+}
+
+/* A sheet that opens must be VISIBLE, transition or not. The animation above starts from opacity 0,
+   so anything that stops it from running leaves an open popover nobody can read -- the same trap the
+   hero reveal has, and there it was a guard worth having. */
+@media (prefers-reduced-motion: reduce) {
+    .sheet {
+        opacity: 1;
+        translate: none;
+        transition: none;
+    }
+}
+
+.sheet::backdrop {
+    background: var(--nav-scrim);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+}
+
+.sheet-title {
+    margin: 0 0 var(--spacing-5);
+    font-size: var(--heading-size-h3);
+    line-height: 1.15;
+    letter-spacing: -0.014em;
+}
+
+.sheet p {
+    margin: 0 0 var(--spacing-4);
+    font-size: var(--text-size-reading);
+    line-height: var(--leading-reading);
+    letter-spacing: var(--tracking-reading);
+    color: var(--fg-muted);
+    text-wrap: pretty;
+}
+
+.sheet p:last-child { margin-bottom: 0; }
+
+.sheet-close {
+    float: right;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin: calc(-1 * var(--spacing-3)) calc(-1 * var(--spacing-3)) 0 0;
+    padding: 0;
+    font: 400 20px / 1 var(--font-body);
+    color: var(--fg-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 9999px;
+    corner-shape: round;
+    cursor: pointer;
+}
+
+.sheet-close:hover { color: var(--fg-body); }
+
 /* ---------- the support table ---------- */
 
 /* Three columns, so no phone special case is needed. What a feature is for and what happens without

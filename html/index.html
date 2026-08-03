@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=ce9f095a">
+<link rel="stylesheet" href="page.css?v=5d816d25">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -1278,7 +1278,7 @@ cornerjs.refresh(el, { reread: true })</code></pre>
     </div>
 </section>
 
-<section id="history">
+<section id="history" style="background: var(--bg-section)">
     <!-- Two columns, and the heading stays put: the timeline is long, and a reader deep in 1959
          should still be able to see what the list is answering. -->
     <div class="wrap history-grid">
@@ -1289,15 +1289,91 @@ cornerjs.refresh(el, { reread: true })</code></pre>
             </div>
         </div>
 
-        <div class="prose">
-            <p class="standfirst">
-                Not Apple, not Figma, not corner.js. The shape is two centuries old,
-                the word is sixty, and the reason anyone cares about curvature continuity comes from
-                car bodies rather than from screens.
-            </p>
-            <ul>
-                <li id="lame-1818">
-                    <strong>1818 &mdash; Gabriel Lamé.</strong> The curve itself: raise the exponent
+        <div class="card-row-wrap">
+            <ul class="card-row" id="historyCards">
+                <li class="card" data-corner-js>
+                    <p class="card-year">1818</p>
+                    <h3 class="card-title">The curve</h3>
+                    <p class="card-line">Raise the exponent above 2 and a circle swells towards a square.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-lame-1818"
+                            aria-label="1818 &amp;mdash; Gabriel Lamé">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js>
+                    <p class="card-year">1959</p>
+                    <h3 class="card-title">The name, and a square</h3>
+                    <p class="card-line">Piet Hein needed a form for Sergels Torg that was neither circle nor rectangle.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-hein-1959"
+                            aria-label="1959 &amp;mdash; Piet Hein">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js>
+                    <p class="card-year">1960s</p>
+                    <h3 class="card-title">The shoulders</h3>
+                    <p class="card-line">Cubic Béziers, from car bodies: Bézier at Renault, de Casteljau at Citroën.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-bezier-1960s"
+                            aria-label="1960s &amp;mdash; Pierre Bézier, at Renault">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js>
+                    <p class="card-year">1966</p>
+                    <h3 class="card-title">The word</h3>
+                    <p class="card-line">An architect coined <em>squircle</em> for a client who wanted Hein’s shape.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-panholzer-1966"
+                            aria-label="1966 &amp;mdash; Peter Panholzer">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js>
+                    <p class="card-year">2011</p>
+                    <h3 class="card-title">The first screens</h3>
+                    <p class="card-line">Nokia used it as an identity, not a detail — and MeeGo built an icon grid on it.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-nokia-2011"
+                            aria-label="2011 &amp;mdash; Nokia">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js>
+                    <p class="card-year">2013</p>
+                    <h3 class="card-title">Not a superellipse</h3>
+                    <p class="card-line">iOS 7 shipped a continuous corner: an arc with Bézier shoulders, which no exponent reaches.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-apple-2013"
+                            aria-label="2013 &amp;mdash; Apple">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js>
+                    <p class="card-year">2018</p>
+                    <h3 class="card-title">A parameter instead</h3>
+                    <p class="card-line">Unable to fit one exponent, Figma derived a construction with smoothing.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-figma-2018"
+                            aria-label="2018 &amp;mdash; Figma">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js>
+                    <p class="card-year">2025</p>
+                    <h3 class="card-title">Into the platform</h3>
+                    <p class="card-line"><code>corner-shape</code> puts the Lamé family into CSS itself.</p>
+                    <button class="card-open" type="button" popovertarget="sheet-css-2025"
+                            aria-label="2025 &amp;mdash; CSS">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+            <div class="sheet" id="sheet-lame-1818" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-lame-1818"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">1818</p>
+                <h3 class="sheet-title">1818 &mdash; Gabriel Lamé</h3>
+                The curve itself: raise the exponent
                     in a circle's or ellipse's equation above 2 and it swells towards a square. Every
                     <a href="https://en.wikipedia.org/wiki/Superellipse" target="_blank" rel="noopener"><span class="link-text">superellipse</span></a> here is a
                     Lamé curve, and the exponent-4 case centred on the origin is
@@ -1305,37 +1381,43 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                     family is worth seeing whole: at exponent 1 it is a diamond, at 2 the circle or
                     ellipse, and as the exponent grows it approaches a rectangle &mdash; one equation
                     and one parameter from sharp to round.
-                </li>
-                <li>
-                    <strong>Mid-century &mdash; car surfacing.</strong> The reason curvature
-                    continuity matters at all was found on sheet metal, not on screens. A flat panel
-                    running into a radius means the curvature jumps from 0 to 1/r at one line, and on
-                    a reflective surface that line is visible: a perfect mirror abruptly becomes a
-                    stretched one. Surfacers check it with <em>curvature combs</em> &mdash; spaced
-                    lines drawn perpendicular to the curve, each as long as the curvature at that
-                    point. Combs that meet at the join are acceptable; combs tangential to each other
-                    are better; and the same test can be applied to the comb's own rate of change.
-                    None of this is specialist knowledge in product design, and type designers work
-                    to it too, often by eye rather than by arithmetic.
-                </li>
-                <li id="bezier-1960s">
-                    <strong>1960s &mdash; Pierre Bézier, at Renault.</strong> The corners here are cubic
-                    Béziers, and they came out of the same industry. Bézier spent decades at
-                    Renault and developed them for car body design; Paul de Casteljau was working out
-                    the same mathematics at Citroën around the same time. The web draws rounded
-                    corners with a tool built to draw fenders.
-                </li>
-                <li id="hein-1959">
-                    <strong>1959 &mdash; Piet Hein.</strong> Named it and put it to work:
+            </div>
+            <div class="sheet" id="sheet-hein-1959" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-hein-1959"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">1959</p>
+                <h3 class="sheet-title">1959 &mdash; Piet Hein</h3>
+                Named it and put it to work:
                     <em>superellipse</em> for the general case, <em>supercircle</em> when the axes are
                     equal. He was not after a new family of curves but a specific problem &mdash;
                     Sergels Torg in Stockholm needed a form that held the square together without
                     being static as a circle or hard as a rectangle. What he arrived at is
                     <a href="https://www.johndcook.com/blog/2014/06/07/swedish-superellipse/" target="_blank" rel="noopener"><span class="link-text">exponent 5/2 with axes at 6:5</span></a>, and the fountain
                     is still that shape. He carried it on into tables, furniture and jewellery.
-                </li>
-                <li id="panholzer-1966">
-                    <strong>1966 &mdash; Peter Panholzer.</strong> Coined <em>squircle</em>, as an
+            </div>
+            <div class="sheet" id="sheet-bezier-1960s" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-bezier-1960s"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">1960s</p>
+                <h3 class="sheet-title">1960s &mdash; Pierre Bézier, at Renault</h3>
+                The corners here are cubic
+                    Béziers, and they came out of the same industry. Bézier spent decades at
+                    Renault and developed them for car body design; Paul de Casteljau was working out
+                    the same mathematics at Citroën around the same time. The web draws rounded
+                    corners with a tool built to draw fenders.
+            </div>
+            <div class="sheet" id="sheet-panholzer-1966" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-panholzer-1966"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">1966</p>
+                <h3 class="sheet-title">1966 &mdash; Peter Panholzer</h3>
+                Coined <em>squircle</em>, as an
                     architect working for Gerald Robinson, after Robinson read Piet Hein in
                     Scientific American and suggested the shape for a project. Panholzer drew fifteen
                     of them by hand on vellum over graph paper, from exponent 2.6 to 4.0, and
@@ -1343,18 +1425,30 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                     area sits exactly halfway between the circle's and the square's &mdash; 3.1620,
                     close to π but not π &mdash; and had a conference table built at it. Robinson, for
                     his part, designed a parking garage at exponent <em>e</em>.
-                </li>
-                <li id="nokia-2011">
-                    <strong>2011 &mdash; Nokia.</strong> Used the shape as an identity rather than a
+            </div>
+            <div class="sheet" id="sheet-nokia-2011" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-nokia-2011"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">2011</p>
+                <h3 class="sheet-title">2011 &mdash; Nokia</h3>
+                Used the shape as an identity rather than a
                     detail: <a href="https://en.wikipedia.org/wiki/Squircle#Uses" target="_blank" rel="noopener"><span class="link-text">many Nokia handsets</span></a>
                     carry a squircle touchpad button, and MeeGo's Harmattan built its whole icon
                     language on it &mdash; documented by the community that reverse-engineered the
                     grid, in
                     <a href="https://meegoicons.com/the-squircle-design-philosophy/" target="_blank" rel="noopener"><span class="link-text">The squircle
                     design philosophy</span></a>, rather than in a published Nokia specification.
-                </li>
-                <li id="apple-2013">
-                    <strong>2013 &mdash; Apple.</strong> Shipped a continuous corner across the
+            </div>
+            <div class="sheet" id="sheet-apple-2013" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-apple-2013"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">2013</p>
+                <h3 class="sheet-title">2013 &mdash; Apple</h3>
+                Shipped a continuous corner across the
                     platform, which is where the idea that a corner could be something other than a
                     quarter circle stopped being a specialist concern. It is not a superellipse: it keeps a
                     circular arc at the apex with Bézier shoulders either side, and Apple's own name
@@ -1375,9 +1469,15 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                     which puts 60% smoothing near exponent 4.9 &mdash; so the two shapes land
                     close together at the setting everyone uses, while remaining different
                     constructions.
-                </li>
-                <li id="figma-2018">
-                    <strong>2018 &mdash; Figma.</strong> Could not fit a single exponent to Apple's
+            </div>
+            <div class="sheet" id="sheet-figma-2018" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-figma-2018"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">2018</p>
+                <h3 class="sheet-title">2018 &mdash; Figma</h3>
+                Could not fit a single exponent to Apple's
                     curve, so they
                     <a href="https://www.figma.com/blog/desperately-seeking-squircles/" target="_blank" rel="noopener"><span class="link-text">derived a
                     construction with a parameter</span></a> instead of tracing a path. That parameter is
@@ -1388,47 +1488,18 @@ cornerjs.refresh(el, { reread: true })</code></pre>
                     &mdash; and they dropped it: turning the smoothing up made the corner's arc
                     drift rather than stay put, and the shape needed segments more complex than the
                     cubic Béziers their renderer draws.
-                </li>
-                <li id="css-2025">
-                    <strong>2025 &mdash; CSS.</strong> <code>corner-shape</code> puts the Lamé family
+            </div>
+            <div class="sheet" id="sheet-css-2025" popover="auto" data-corner-js>
+                <button class="sheet-close" type="button" popovertarget="sheet-css-2025"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <p class="card-year">2025</p>
+                <h3 class="sheet-title">2025 &mdash; CSS</h3>
+                <code>corner-shape</code> puts the Lamé family
                     into the platform: <code>squircle</code> is exponent 4, and
                     <code>superellipse(k)</code> takes any exponent as 2<sup>k</sup>.
-                </li>
-                <li>
-                    <strong>corner.js.</strong> Draws Figma's construction where CSS cannot, and
-                    steps aside where it can. A curve from 1818, a name from 1966, a criterion from
-                    the paint shop, a parametrization from 2018: none of it is ours.
-                </li>
-            </ul>
-            <p>
-                <strong>How much this matters depends on the dimension</strong>, and it is worth
-                being honest about which one a web page is in. In 2D, tangent continuity is usually
-                enough: a square rounded with quadratic arcs, with cubic ones, or with a superellipse
-                all look fine, and the difference is easier to see than to name even when you can see
-                it. It is in shaded 3D that curvature discontinuity becomes glaring &mdash; the
-                artefact is called <em>broken highlights</em>, and CAD packages ship zebra-stripe
-                analysis specifically to hunt for it before a surface goes to tooling. So a
-                continuous corner on a screen is a refinement, not a rescue.
-            </p>
-            <p>
-                The same order of continuity turns up wherever a smooth appearance is computed rather
-                than drawn. <a href="https://en.wikipedia.org/wiki/Smoothstep" target="_blank" rel="noopener"><span class="link-text">Smoothstep</span></a> is only
-                C1 continuous, which is why a displacement or bump shader built on it can still show a
-                seam; Perlin's own
-                <a href="https://en.wikipedia.org/wiki/Smoothstep#Variants" target="_blank" rel="noopener"><span class="link-text">improved variant</span></a> is C2.
-                Two notations are in circulation for this and they are not interchangeable: C for
-                parametric continuity, G for geometric.
-            </p>
-            <p>
-                <strong>On sourcing.</strong> The curve, the quartic, Nokia's button and Apple's
-                approximation are from Wikipedia and Apple's own documentation. The 1966 coinage and
-                the 3.1620 figure rest on a single account,
-                <a href="https://www.johndcook.com/blog/2019/04/02/history-of-the-term-squircle/" target="_blank" rel="noopener"><span class="link-text">John
-                D. Cook's</span></a>, written after Panholzer contacted him with his evidence; there is no
-                published paper behind it, and it is here on that footing rather than as an
-                established fact.
-            </p>
-        </div>
+            </div>
     </div>
 </section>
 
