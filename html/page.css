@@ -2709,6 +2709,54 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     cursor: pointer;
 }
 
+/* PANELS RATHER THAN TEASERS. These cards hold a whole component -- a tab strip, a results table, a
+   snippet -- so one fills the container and the next is cut, instead of three abreast. Nothing to
+   open: their content is the content, so they carry no plus and the card click has nothing to forward
+   to. */
+.card-row-wide .card { --visible: 1; }
+
+@media (min-width: 900px) { .card-row-wide .card { --visible: 1.15; } }
+
+.card-panel {
+    min-height: 0;
+    padding: var(--spacing-6);
+    cursor: default;
+}
+
+/* FILLED, like the other cards: the pieces inside sit on the card rather than each bringing its own
+   panel, so a card reads as one surface instead of a box holding boxes. */
+.card-panel .code,
+.card-panel .framework-checks,
+.card-panel .table-scroll {
+    background: transparent;
+    border: 0;
+}
+
+.card-panel .code-tabpanel { background: transparent; }
+
+/* The code keeps its monospace and its scroll, but not a second frame around it. */
+.card-panel pre {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.card-panel .code-head {
+    padding: 0 0 var(--spacing-3);
+    background: transparent;
+    border: 0;
+}
+
+.card-panel:hover { translate: none; }
+
+/* The pieces inside keep their own frames, so the panel does not add a second one around them. */
+.card-panel .code,
+.card-panel .framework-checks { margin: 0; }
+
+.card-panel .code-tabs { margin-top: var(--spacing-5); }
+
+.card-panel .framework-head h3 { margin-top: 0; }
+
 /* The live outcome, on the card. It is the thing the section is claiming, so it is the thing that
    should be visible without opening anything. */
 .card-check {
