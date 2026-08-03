@@ -92,7 +92,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=optional">
-<link rel="stylesheet" href="page.css?v=0a23819a">
+<link rel="stylesheet" href="page.css?v=96fb1044">
 <!-- async: the module needs neither DOMContentLoaded nor a boot call. -->
 <script async src="./corner.min.js?v=4111d034"></script>
 </head>
@@ -646,17 +646,92 @@
 
         <!-- One panel at a time: six snippets stacked would bury the prose under them, and only
              one framework is ever the reader's. -->
-        <div class="code-tabs" id="codeTabs">
-            <div class="code-tablist" role="tablist" aria-label="Integration examples">
-                <button class="code-tab" id="tabbtn-react" type="button" role="tab" aria-controls="tab-react" aria-selected="true">React</button>
-                <button class="code-tab" id="tabbtn-vue" type="button" role="tab" aria-controls="tab-vue" aria-selected="false">Vue</button>
-                <button class="code-tab" id="tabbtn-svelte" type="button" role="tab" aria-controls="tab-svelte" aria-selected="false">Svelte</button>
-                <button class="code-tab" id="tabbtn-angular" type="button" role="tab" aria-controls="tab-angular" aria-selected="false">Angular</button>
-                <button class="code-tab" id="tabbtn-solid" type="button" role="tab" aria-controls="tab-solid" aria-selected="false">Solid</button>
-                <button class="code-tab" id="tabbtn-turbo" type="button" role="tab" aria-controls="tab-turbo" aria-selected="false">Turbo</button>
+        <div class="card-row-wrap">
+            <ul class="card-row" data-card-row>
+                <li class="card" data-corner-js data-framework="react">
+                    <p class="card-year" data-framework-version>React</p>
+                    <h3 class="card-title">React</h3>
+                    <p class="card-line">A ref, one call in useEffect, and the wrapper rendered by you.</p>
+                    <p class="card-check" data-framework-result>Checking&hellip;</p>
+                    <button class="card-open" type="button" popovertarget="tab-react"
+                            aria-label="React example">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js data-framework="vue">
+                    <p class="card-year" data-framework-version>Vue</p>
+                    <h3 class="card-title">Vue</h3>
+                    <p class="card-line">A template ref and onMounted. Nothing to install.</p>
+                    <p class="card-check" data-framework-result>Checking&hellip;</p>
+                    <button class="card-open" type="button" popovertarget="tab-vue"
+                            aria-label="Vue example">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js data-framework="svelte">
+                    <p class="card-year" data-framework-version>Svelte</p>
+                    <h3 class="card-title">Svelte</h3>
+                    <p class="card-line">bind:this and onMount — the compiled output is what mounts here.</p>
+                    <p class="card-check" data-framework-result>Checking&hellip;</p>
+                    <button class="card-open" type="button" popovertarget="tab-svelte"
+                            aria-label="Svelte example">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js data-framework="solid">
+                    <p class="card-year" data-framework-version>Solid</p>
+                    <h3 class="card-title">Solid</h3>
+                    <p class="card-line">A ref and onMount, the same two lines as everywhere else.</p>
+                    <p class="card-check" data-framework-result>Checking&hellip;</p>
+                    <button class="card-open" type="button" popovertarget="tab-solid"
+                            aria-label="Solid example">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js data-framework="turbo">
+                    <p class="card-year" data-framework-version>Turbo</p>
+                    <h3 class="card-title">Turbo</h3>
+                    <p class="card-line">Nothing to hook at all: the observer sees the new fragment.</p>
+                    <p class="card-check" data-framework-result>Checking&hellip;</p>
+                    <button class="card-open" type="button" popovertarget="tab-turbo"
+                            aria-label="Turbo example">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+                <li class="card" data-corner-js data-framework="angular">
+                    <p class="card-year" data-framework-version>Angular</p>
+                    <h3 class="card-title">Angular</h3>
+                    <p class="card-line">ngAfterViewInit. Shown, not run — a static page cannot host its compiler.</p>
+                    <p class="card-check" data-framework-result>Checking&hellip;</p>
+                    <button class="card-open" type="button" popovertarget="tab-angular"
+                            aria-label="Angular example">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="card-nav" data-card-nav>
+                <button type="button" data-scroll="-1" aria-label="Previous frameworks" disabled>
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 3 5 8l5 5"/>
+                    </svg>
+                </button>
+                <button type="button" data-scroll="1" aria-label="More frameworks">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 3l5 5-5 5"/>
+                    </svg>
+                </button>
             </div>
-            <div class="code code-tabpanel" id="tab-react" role="tabpanel"
-                 aria-labelledby="tabbtn-react">
+        </div>
+
+<div class="sheet sheet-wide code" id="tab-react" popover="auto">
+                <button class="sheet-close" type="button" popovertarget="tab-react"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                
                 <div class="code-head"><span>React</span></div>
                 <pre><code>import cornerjs from 'corner.js'
 import { useEffect, useRef } from 'react'
@@ -679,8 +754,12 @@ export function Card ({ children })
     )
 }</code></pre>
             </div>
-            <div class="code code-tabpanel" id="tab-vue" role="tabpanel"
-                 aria-labelledby="tabbtn-vue" hidden>
+            <div class="sheet sheet-wide code" id="tab-vue" popover="auto">
+                <button class="sheet-close" type="button" popovertarget="tab-vue"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                
                 <div class="code-head"><span>Vue</span></div>
                 <pre><code>&lt;script setup&gt;
 import cornerjs from 'corner.js'
@@ -700,8 +779,12 @@ onMounted(() =&gt; cornerjs.apply(root.value))
     &lt;/div&gt;
 &lt;/template&gt;</code></pre>
             </div>
-            <div class="code code-tabpanel" id="tab-svelte" role="tabpanel"
-                 aria-labelledby="tabbtn-svelte" hidden>
+            <div class="sheet sheet-wide code" id="tab-svelte" popover="auto">
+                <button class="sheet-close" type="button" popovertarget="tab-svelte"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                
                 <div class="code-head"><span>Svelte</span></div>
                 <pre><code>&lt;script&gt;
     import cornerjs from 'corner.js'
@@ -719,8 +802,12 @@ onMounted(() =&gt; cornerjs.apply(root.value))
     &lt;/div&gt;
 &lt;/div&gt;</code></pre>
             </div>
-            <div class="code code-tabpanel" id="tab-angular" role="tabpanel"
-                 aria-labelledby="tabbtn-angular" hidden>
+            <div class="sheet sheet-wide code" id="tab-angular" popover="auto">
+                <button class="sheet-close" type="button" popovertarget="tab-angular"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                
                 <div class="code-head"><span>Angular</span></div>
                 <pre><code>import cornerjs from 'corner.js'
 import { AfterViewInit, Component, ElementRef,
@@ -746,8 +833,12 @@ export class CardComponent implements AfterViewInit
     }
 }</code></pre>
             </div>
-            <div class="code code-tabpanel" id="tab-solid" role="tabpanel"
-                 aria-labelledby="tabbtn-solid" hidden>
+            <div class="sheet sheet-wide code" id="tab-solid" popover="auto">
+                <button class="sheet-close" type="button" popovertarget="tab-solid"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                
                 <div class="code-head"><span>Solid</span></div>
                 <pre><code>import cornerjs from 'corner.js'
 import { onMount } from 'solid-js'
@@ -768,8 +859,12 @@ export function Card (props)
     )
 }</code></pre>
             </div>
-            <div class="code code-tabpanel" id="tab-turbo" role="tabpanel"
-                 aria-labelledby="tabbtn-turbo" hidden>
+            <div class="sheet sheet-wide code" id="tab-turbo" popover="auto">
+                <button class="sheet-close" type="button" popovertarget="tab-turbo"
+                        popovertargetaction="hide" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                
                 <div class="code-head"><span>Turbo</span></div>
                 <pre><code>&lt;!-- Nothing to import and nothing to hook: the module
      is already on the page from your layout. The
@@ -786,7 +881,6 @@ export function Card (props)
     &lt;template&gt;…&lt;/template&gt;
 &lt;/turbo-stream&gt;</code></pre>
             </div>
-        </div>
 
         
 
@@ -3424,6 +3518,10 @@ async function svelte (stage)
 }
 
 const CHECKS = [['React', react], ['Vue', vue], ['Svelte', svelte], ['Solid', solid], ['Turbo', turbo]]
+
+// Angular has no check to run -- a static page cannot host its compiler -- so its card says that
+// rather than sitting on 'Checking...' for ever.
+queueMicrotask(() => card('Angular', null, 'Shown, not run: needs its own compiler', 'note'))
 const rows = document.getElementById('frameworkRows')
 const note = document.getElementById('frameworkNote')
 let failures = 0
@@ -3431,6 +3529,25 @@ let failures = 0
 function cell (ok, text)
 {
     return '<td class="' + (ok ? 'check-pass' : 'check-fail') + '">' + text + '</td>'
+}
+
+function card (label, version, outcome, ok)
+{
+    const el = document.querySelector('[data-framework="' + label.toLowerCase() + '"]')
+
+    if (!el) return
+
+    const eyebrow = el.querySelector('[data-framework-version]')
+    const result = el.querySelector('[data-framework-result]')
+
+    if (eyebrow && version) eyebrow.textContent = label + ' ' + version
+    if (result)
+    {
+        result.textContent = outcome
+        // Three states, not two: a check that did not run is not a check that failed, and a real
+        // failure has to look different from a footnote or it will be read as one.
+        result.dataset.state = ok === 'note' ? 'note' : (ok ? 'pass' : 'fail')
+    }
 }
 
 for (const [label, check] of CHECKS)
@@ -3463,12 +3580,19 @@ for (const [label, check] of CHECKS)
                 ? '<td title="This tab rendered no frames during the check">&ndash;</td>'
                 : cell(resized, resized ? 'yes' : 'no'))
             + cell(unmounted === 'clean', unmounted)
+
+        // The same answer on the card: the version on its eyebrow, the outcome as its one visible
+        // line. A cell in a table row is the wrong place for the most persuasive thing on the page.
+        card(label, version, measured && measured.drawn && measured.reused && unmounted === 'clean'
+            ? 'Mounted, drew, reused the wrapper, unmounted clean'
+            : 'Check did not pass', measured && measured.drawn && measured.reused)
     }
     catch (error)
     {
         failures += 1
         row.innerHTML = '<td>' + label + '</td><td>&ndash;</td>'
             + '<td class="check-fail" colspan="4">' + error.name + ': ' + error.message.slice(0, 60) + '</td>'
+        card(label, null, error.name, false)
     }
 }
 

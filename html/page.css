@@ -2709,6 +2709,25 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     cursor: pointer;
 }
 
+/* The live outcome, on the card. It is the thing the section is claiming, so it is the thing that
+   should be visible without opening anything. */
+.card-check {
+    margin: var(--spacing-4) 0 0;
+    font: 400 var(--text-size-detail) / 1.5 var(--font-mono);
+    color: var(--fg-faint);
+}
+
+.card-check[data-state="pass"] { color: #2f8f4e; }
+.card-check[data-state="note"] { color: var(--fg-muted); }
+/* A failure has to be distinguishable from a note, or the section stops being evidence. */
+.card-check[data-state="fail"] { color: #c0392b; }
+
+/* A snippet in a sheet keeps the code panel's own frame, so its head and its scroll behave as they do
+   anywhere else on the page. */
+.sheet.code { padding: 0; }
+.sheet.code .sheet-close { margin: var(--spacing-4) var(--spacing-4) 0 0; }
+.sheet.code pre { margin: 0; }
+
 /* THE SHEET is a popover, so the top layer, the backdrop, the light dismiss and returning focus to
    the button are the browser's job. What is left here is what it looks like. */
 .sheet {
