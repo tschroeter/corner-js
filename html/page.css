@@ -2513,13 +2513,12 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
    --bleed is the distance from the container's edge to the viewport's, which is 0 until the window is
    wider than the container. body carries overflow-x: clip, so the vw arithmetic cannot introduce a
    horizontal scrollbar of its own. */
+/* THE TRACK IS THE CONTAINER, not the viewport -- and that is measured off the reference rather than
+   assumed: their card track runs 1022px inside a 1698px window, so it does NOT reach the edge. Which
+   is the whole reason their count stays at three however wide the screen gets, while a track bled to
+   the viewport shows one more card per 400 pixels of window. The cut card is inside the track. */
 .card-row-wrap {
-    --bleed: max(0px, calc((100vw - var(--container)) / 2));
-    --inset: calc(var(--bleed) + var(--spacing-6));
     position: relative;
-    /* BOTH sides, so a card scrolled past the start leaves at the viewport edge rather than being cut
-       off at the container. The row's own padding below puts the first card back at the container. */
-    margin-inline: calc(-1 * var(--inset));
 }
 
 .card-row {
@@ -2527,9 +2526,10 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     gap: var(--spacing-5);
     margin: 0;
     padding-block: 4px var(--spacing-5);
-    /* Equal to the bleed, so the first card starts flush with the heading while the track itself runs
-       edge to edge. */
-    padding-inline: var(--inset);
+    /* A little breathing room for the focus ring and the hover lift, not an inset: the first card is
+       meant to sit flush with the heading. */
+    padding-inline: 0;
+    margin-inline: -2px;
     list-style: none;
     overflow-x: auto;
     scroll-snap-type: inline mandatory;
@@ -2537,8 +2537,7 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
        so arrow keys still scroll it for anyone not using the buttons. */
     scrollbar-width: none;
     overscroll-behavior-inline: contain;
-    /* Snapping lands the card at the container's edge, not under the bleed. */
-    scroll-padding-inline-start: var(--inset);
+    scroll-padding-inline-start: 2px;
 }
 
 .card-row::-webkit-scrollbar { display: none; }
@@ -2588,7 +2587,10 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
        337x300 at a 1698px viewport, which is under three visible, and their cards are the bigger ones.
        The peek that says "this scrolls" comes free from the bleed, since the next card is already past
        the container edge. */
-    --visible: 2;
+    /* Fractional on purpose: three whole cards and a quarter of the fourth, so the cut card is what
+       says the row scrolls. The count no longer changes with the window -- the track is capped by the
+       container, so this holds at 1200 and at 2500 alike. */
+    --visible: 1.15;
     width: calc((100% - (var(--visible) - 1) * var(--spacing-5)) / var(--visible));
     min-height: 340px;
     padding: var(--spacing-5);
@@ -2597,12 +2599,8 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     border-radius: 28px;
 }
 
-@media (min-width: 700px) { .card { --visible: 3; } }
-@media (min-width: 1400px) { .card { --visible: 4; } }
-
-@media (max-width: 520px) {
-    .card { --visible: 1.12; }
-}
+@media (min-width: 560px) { .card { --visible: 2.2; } }
+@media (min-width: 900px) { .card { --visible: 3.25; } }
 
 .card-year {
     margin: 0 0 var(--spacing-4);
