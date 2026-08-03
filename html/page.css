@@ -2482,13 +2482,42 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
 
 /* ---------- cards, and the sheets behind them ---------- */
 
+/* A HEADING BAND ABOVE THE ROW, not a column beside it. The heading and its standfirst share the
+   band's two halves; the row underneath takes the full width, so the first card starts where the
+   heading starts. Nothing is sticky here -- there is no long column left for it to hold against. */
+.card-head {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-8);
+    align-items: start;
+    margin-bottom: var(--spacing-6);
+}
+
+.card-head .section-head { margin-bottom: 0; }
+.card-head .standfirst { margin-bottom: 0; }
+
+@media (max-width: 860px) {
+    .card-head {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--spacing-5);
+    }
+}
+
 /* A ROW THAT SCROLLS, not a grid that wraps: eight entries in a timeline have an order, and a row
    keeps it readable at any width -- measured off apple.com, whose own card track runs 1289px of
    content in 1022px of viewport with scroll-snap on the inline axis. */
+/* FLUSH LEFT WITH THE CONTAINER, BLEEDING RIGHT TO THE VIEWPORT. The first card lines up with the
+   heading above it, and the row runs off the edge of the screen instead of stopping at the container
+   -- which is what tells you there is more of it. apple.com does exactly this.
+ *
+   --bleed is the distance from the container's edge to the viewport's, which is 0 until the window is
+   wider than the container. body carries overflow-x: clip, so the vw arithmetic cannot introduce a
+   horizontal scrollbar of its own. */
 .card-row-wrap {
-    /* Full bleed to the viewport edge, so the row reads as continuing rather than stopping short. The
-       negative margin is the wrap's own padding, given back. */
-    margin-inline: calc(-1 * var(--spacing-6));
+    --bleed: max(0px, calc((100vw - var(--container)) / 2));
+    position: relative;
+    margin-left: calc(-1 * var(--spacing-6));
+    margin-right: calc(-1 * (var(--bleed) + var(--spacing-6)));
 }
 
 .card-row {
@@ -2496,12 +2525,51 @@ html:not([data-restored]) .hero-demo[data-drawn] .hero-demo-stack {
     gap: var(--spacing-5);
     margin: 0;
     padding: 4px var(--spacing-6) var(--spacing-5);
+    padding-right: calc(var(--bleed) + var(--spacing-6));
     list-style: none;
     overflow-x: auto;
     scroll-snap-type: inline mandatory;
-    scrollbar-width: thin;
+    /* NO SCROLLBAR. The two buttons below are the affordance instead -- and the row keeps a tabindex,
+       so arrow keys still scroll it for anyone not using the buttons. */
+    scrollbar-width: none;
     overscroll-behavior-inline: contain;
+    /* Snapping lands the card at the container's edge, not under the bleed. */
+    scroll-padding-inline-start: var(--spacing-6);
 }
+
+.card-row::-webkit-scrollbar { display: none; }
+
+.card-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+/* The two buttons, bottom right of the row, where the reference puts them. */
+.card-nav {
+    display: flex;
+    gap: var(--spacing-3);
+    justify-content: flex-end;
+    margin-right: calc(var(--bleed) + var(--spacing-6));
+}
+
+.card-nav button {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: var(--fg-body);
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: 9999px;
+    corner-shape: round;
+    cursor: pointer;
+    transition: opacity 140ms ease;
+}
+
+.card-nav button[disabled] {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.card-nav svg { width: 15px; height: 15px; }
 
 /* NO BORDER AND NO SHADOW, and that is structural rather than cosmetic: either one makes corner.js
    insert a wrapper for the sibling SVG, and a <div> inside a <ul> is invalid markup -- the wrappers
